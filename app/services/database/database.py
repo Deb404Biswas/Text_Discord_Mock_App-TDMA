@@ -19,10 +19,10 @@ class DatabaseConnect:
             connection_string = f"mongodb+srv://Debdwaipayan:{mongo_password}@internship.3kcwior.mongodb.net/?tls=true&tlsAllowInvalidCertificates=true&appName=Internship"
             client =AsyncIOMotorClient(connection_string)
             Text_Discord_Mock_App_db=client['Text_Discord_Mock_App']
-            user_collection=Text_Discord_Mock_App_db['user']
-            guild_collection=Text_Discord_Mock_App_db['Guild']
-            role_collection=Text_Discord_Mock_App_db['Role']
-            channel_collection=Text_Discord_Mock_App_db['Channel']
+            user_collection=Text_Discord_Mock_App_db['Users']
+            guild_collection=Text_Discord_Mock_App_db['Guilds']
+            role_collection=Text_Discord_Mock_App_db['Roles']
+            channel_collection=Text_Discord_Mock_App_db['Channels']
             await client.admin.command("ping")
             logger.info("MongoDB connection established.")
         except Exception as e:
