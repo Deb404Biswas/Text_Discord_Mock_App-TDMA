@@ -81,3 +81,31 @@ try:
 except:
     logger.error("Failed to update guild name at '/{guild_id}/update-guild-name' endpoint")
     raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Can't update guild name at the moment")
+
+try:
+    @router.put("/{guild_id}/add-user", status_code=status.HTTP_200_OK)
+    @limiter.limit("10/minute")
+    async def add_user_to_guild(guild_id: str, user_id: str, request: Request):
+        # Simulate adding user to guild logic here
+        logger.info(f"User_ID: {user_id} added to Guild_ID: {guild_id} successfully")
+        return {
+            "status": status.HTTP_200_OK,
+            "message": f"User_ID: {user_id} added to Guild_ID: {guild_id} successfully"
+        }
+except:
+    logger.error("Failed to add user to guild at '/{guild_id}/add-user' endpoint")
+    raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Can't add user to guild at the moment")
+
+try:
+    @router.put("/{guild_id}/remove-user", status_code=status.HTTP_200_OK)
+    @limiter.limit("10/minute")
+    async def remove_user_from_guild(guild_id: str, user_id: str, request: Request):
+        # Simulate removing user from guild logic here
+        logger.info(f"User_ID: {user_id} removed from Guild_ID: {guild_id} successfully")
+        return {
+            "status": status.HTTP_200_OK,
+            "message": f"User_ID: {user_id} removed from Guild_ID: {guild_id} successfully"
+        }
+except:
+    logger.error("Failed to remove user from guild at '/{guild_id}/remove-user' endpoint")
+    raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Can't remove user from guild at the moment")
