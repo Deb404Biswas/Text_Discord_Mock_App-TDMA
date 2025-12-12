@@ -37,3 +37,11 @@ async def ValidUserCheck(user_id,user_name,guild_id,permission):
         logger.error(f"User with ID {user_id} does not have permission to modify guild {guild_id}")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User does not have permission to modify guild")
     return True
+
+async def channelInGuild(channel_id, guild_id):
+    guild_doc = await DatabaseConnect.guild_collection_find_one(guild_id)
+    channel_list = guild_doc.get("channels", [])
+    if channel_id not in channel_list:
+        logger.error(f"Channel with ID {channel_id} not found in guild {guild_id}")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Channel not found in the specified guild")
+    return True

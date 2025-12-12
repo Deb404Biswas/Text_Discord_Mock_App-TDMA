@@ -132,3 +132,26 @@ class DatabaseConnect:
             logger.error(f"Error:{e}. Occurred while inserting document into channel collection")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail='Error while inserting into channel collection')
     
+    @staticmethod
+    async def channel_collection_find_one(channel_id):
+        try:
+            return await channel_collection.find_one({"_id":channel_id})
+        except Exception as e:
+            logger.error(f"Error:{e}. Occurred while fetching channel from channel collection")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail='Error while fetching channel from channel collection')
+    
+    @staticmethod
+    async def channel_collection_update_one(channel_id,update_doc):
+        try:
+            await channel_collection.update_one({"_id":channel_id},update_doc)
+        except Exception as e:
+            logger.error(f"Error:{e}. Occurred while updating channel in channel collection")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail='Error while updating channel in channel collection')
+    
+    @staticmethod
+    async def channel_collection_delete_one(channel_id):
+        try:
+            await channel_collection.delete_one({"_id":channel_id})
+        except Exception as e:
+            logger.error(f"Error:{e}. Occurred while deleting channel from channel collection")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail='Error while deleting channel from channel collection')

@@ -50,10 +50,19 @@ except:
     raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Can't create channel at the moment")
 
 try:
-    @router.delete('/{guild_id}/{channel_id}/delete-channel', status_code=status.HTTP_200_OK)
+    @router.delete('/{guild_id}/delete-channel', status_code=status.HTTP_200_OK)
     @limiter.limit("10/minute")
-    async def delete_channel(channel_id: str,guild_id: str, request: Request,user:current_user):
-        # Simulate channel deletion logic here
+    async def delete_channel(guild_id: str,channel_id: str, request: Request,user:current_user):
+        user_id=user['user_id']
+        user_name=user['user_name']
+        await ValidUserCheck(user_id,user_name,guild_id,"del_channel")
+        await channelInGuild(channel_id, guild_id)
+        await DatabaseConnect.channel_collection_delete_one(channel_id)
+        guild_doc=await DatabaseConnect.guild_collection_find_one(guild_id)
+        channel_list=guild_doc.get("channels", [])
+        channel_list.remove(channel_id)
+        update_guild_doc={"$set":{"channels":channel_list}}
+        await DatabaseConnect.guild_collection_update_one(guild_id, update_guild_doc)
         logger.info(f"Channel {channel_id} deleted successfully from guild {guild_id}")
         return {
             "status": status.HTTP_200_OK,
@@ -67,7 +76,14 @@ try:
     @router.put('/{guild_id}/{channel_id}/rename-channel',status_code=status.HTTP_202_ACCEPTED)
     @limiter.limit("5/minute")
     async def rename_channel(channel_id: str,guild_id: str, new_channel_name: str, request: Request,user:current_user):
-        # Simulate channel renaming logic here
+        user_id=user['user_id']
+        user_name=user['user_name']
+        await ValidUserCheck(user_id,user_name,guild_id,"mod_guild")
+        await channelInGuild(channel_id, guild_id)
+        channel_doc=await DatabaseConnect.channel_collection_find_one(channel_id)
+        channel_doc['channel_name']=new_channel_name
+        update_channel_doc={"$set":{"channel_name":new_channel_name}}
+        await DatabaseConnect.channel_collection_update_one(channel_id, update_channel_doc)
         logger.info(f"Channel_ID:{channel_id} renamed to {new_channel_name} successfully in guild {guild_id}")
         return {
             "status": status.HTTP_202_ACCEPTED,
