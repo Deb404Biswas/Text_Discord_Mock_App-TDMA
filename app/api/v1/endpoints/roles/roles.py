@@ -8,8 +8,8 @@ from app.services.database.database import DatabaseConnect
 import uuid
 from app.api.v1.endpoints.user.helper.user_helper import get_current_user
 from app.api.dependencies.permissions import Permission
-from pydantic import BaseModel
-from typing import List
+from app.api.v1.endpoints.roles.schema.roles_schema import *
+from app.api.v1.endpoints.roles.helper.roles_helper import *
 
 router = APIRouter(
     prefix="/roles/",
@@ -18,52 +18,12 @@ router = APIRouter(
 limiter= Limiter(key_func=get_remote_address)
 current_user=Annotated[dict, Depends(get_current_user)]
 
-class RoleRequest(BaseModel):
-    role_name: str
-    permissions_list: List[str] = []
-class AssignReq(BaseModel):
-    role_id: str
-    user_id: str
-    
-async def isValidPermissions(permissions_list):
-    for perm in permissions_list:
-        if perm not in Permission.__members__:
-            logger.error(f"Invalid permission: {perm}")
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid permission: {perm}")
-    
-async def role_check_manage_roles(user_id, guild_id):
-    user_doc = await DatabaseConnect.user_collection_find_one(user_id)
-    roles=user_doc.get("roles", [])
-    for role in roles:
-        if role['guild_id'] == guild_id:
-            role_id=role['role_id']
-            break
-    role_doc=await DatabaseConnect.role_collection_find_one(role_id)
-    permissions_list=role_doc.get("permissions", [])
-    for perm in permissions_list:
-        if perm == 'manage_roles':
-            return True
-    return False
-
-async def isUserinGuild(user_id, guild_id):
-    guild = await DatabaseConnect.guild_collection_find_one(guild_id)
-    if not guild:
-        logger.error(f"Guild with ID {guild_id} not found")
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Guild not found")
-    if user_id in guild['users']:
-        user_doc = await DatabaseConnect.user_collection_find_one(user_id)
-        return user_doc
-    else:
-        logger.error(f"User with ID {user_id} is not a member of guild {guild_id}")
-        return None
-    
 try:
     @router.post('/{guild_id}/create-role', status_code=status.HTTP_201_CREATED)
     @limiter.limit("10/minute")
     async def create_role(request: Request, guild_id: str,user:current_user,role_req: RoleRequest):
-        if not role_check_manage_roles(user['user_id'], guild_id):
-            logger.error(f"User with ID {user['user_id']} does not have permission to manage roles in guild {guild_id}")
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User not authorized to manage roles in the guild")
+        if not userValidCheck(user['user_name'],user['user_id'],guild_id):
+            return
         role_id=str(uuid.uuid4())
         role_name=role_req.role_name
         permissions_list=role_req.permissions_list
@@ -89,12 +49,8 @@ try:
     @router.put('/{guild_id}/assign-role', status_code=status.HTTP_202_ACCEPTED)
     @limiter.limit("10/minute")
     async def assign_role(guild_id: str, assign_req:AssignReq ,user:current_user,request: Request):
-        if not isUserinGuild(user['user_id'], guild_id):
-            logger.error(f"User{user['user_name']} with ID {user['user_id']} is not a member of guild {guild_id}")
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"User{user['user_id']} is not a member of the guild")
-        if not role_check_manage_roles(user['user_id'], guild_id):
-            logger.error(f"User with ID {user['user_id']} does not have permission to manage roles in guild {guild_id}")
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User not authorized to manage roles in the guild")
+        if not userValidCheck(user['user_name'],user['user_id'],guild_id):
+            return
         role_id=assign_req.role_id
         user_id=assign_req.user_id
         user_doc= await isUserinGuild(user_id, guild_id)
@@ -126,14 +82,33 @@ except Exception as e:
     raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Can't assign role at the moment")
 
 try:
-    @router.put('/{guild_id}/{user_id}/update-role', status_code=status.HTTP_202_ACCEPTED)
+    @router.put('/{guild_id}/update-role', status_code=status.HTTP_202_ACCEPTED)
     @limiter.limit("5/minute")
-    async def update_role(user_id: str, guild_id: str, role_id: str,user:current_user, request: Request):
-        # Simulate role update logic here
-        logger.info(f"Role updated to Role_ID:{role_id} for User_ID:{user_id} successfully in guild {guild_id}")
+    async def update_role(guild_id: str, role_id: str,user:current_user, request: Request,role_req: RoleRequest):
+        if not userValidCheck(user['user_name'],user['user_id'],guild_id):
+            return
+        guild_doc=await DatabaseConnect.guild_collection_find_one(guild_id)
+        if role_id not in guild_doc.get("roles_in_guild", []):
+            logger.error(f"Role with ID {role_id} not found in guild {guild_id}")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found in the guild")
+        role_doc=await DatabaseConnect.role_collection_find_one(role_id)
+        if not role_doc:
+            logger.error(f"Role with ID {role_id} not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
+        role_name=role_req.role_name
+        permissions_list=role_req.permissions_list
+        await isValidPermissions(permissions_list)
+        update_doc={
+            "$set": {
+                "role_name": role_name,
+                "permissions": permissions_list
+            }
+        }
+        await DatabaseConnect.role_collection_update_one(role_id,update_doc)
+        logger.info(f"Permission updated for role: {role_id} successfully in guild {guild_id}")
         return {
             "status": status.HTTP_202_ACCEPTED,
-            "message": f"Role updated for User_ID: {user_id} successfully"
+            "message": f"Role updated successfully"
         }
 except Exception as e:
     logger.error(f"Failed to update role at '/guild_id/user_id/update-role' endpoint: {e}")
@@ -143,12 +118,15 @@ try:
     @router.get('/display-permissions', status_code=status.HTTP_200_OK)
     @limiter.limit("1/second")
     async def display_permissions(request: Request):
-        # Simulate fetching permissions logic here
+        permissions=[]
+        for perm in Permission:
+            permissions.append({perm.name: perm.value})
         logger.info("Permissions fetched successfully")
+        logger.debug(f"Permissions: {permissions}")
         return {
             "status": status.HTTP_200_OK,
             "message": "Permissions fetched successfully",
-            "Permissions": []
+            "Permissions": permissions
         }
 except Exception as e:
     logger.error(f"Failed to display permissions at '/display-permissions' endpoint: {e}")
