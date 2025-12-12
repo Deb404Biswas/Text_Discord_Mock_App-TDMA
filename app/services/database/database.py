@@ -36,3 +36,10 @@ class DatabaseConnect:
         except Exception as e:
             logger.error(f"Error:{e}. Occurred while closing mongodb connection")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail='Error while closing MongoDB connection')
+    @staticmethod
+    async def user_collection_insert_one(doc):
+        try: 
+            await user_collection.insert_one(doc)
+        except Exception as e:
+            logger.error(f"Error:{e}. Occurred while inserting user into user collection")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail='Error while inserting user into user collection')
