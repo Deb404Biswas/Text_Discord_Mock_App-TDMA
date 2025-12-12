@@ -1,6 +1,5 @@
 from fastapi import HTTPException, status
 from app.services.database.database import DatabaseConnect
-from app.api.v1.endpoints.channel.helper.channel_helper import *
 from loguru import logger
 
 async def isUserinGuild(user_id, guild_id):

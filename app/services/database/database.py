@@ -122,3 +122,13 @@ class DatabaseConnect:
             logger.error(f"Error:{e}. Occurred while updating role in role collection")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail='Error while updating role in role collection')
     
+    # Channel Collection Methods------------
+    
+    @staticmethod
+    async def channel_collection_insert_one(doc):
+        try: 
+            await channel_collection.insert_one(doc)
+        except Exception as e:
+            logger.error(f"Error:{e}. Occurred while inserting document into channel collection")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail='Error while inserting into channel collection')
+    

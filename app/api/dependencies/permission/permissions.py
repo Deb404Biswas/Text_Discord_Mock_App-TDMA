@@ -10,3 +10,4 @@ class Permission(str, Enum):
     mod_guild="modify guild name,channel name"
     guild_owner="all permissions in guild"
     manage_roles="create,assign,update roles in guild"
+    create_channel="create channels in guild"

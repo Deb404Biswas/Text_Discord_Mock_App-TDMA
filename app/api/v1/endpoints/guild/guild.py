@@ -12,6 +12,7 @@ from app.core.config.config import settings
 import uuid
 import datetime
 
+
 router = APIRouter(
     prefix="/guild/",
     tags=["Guild"]
