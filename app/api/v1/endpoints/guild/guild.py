@@ -1,25 +1,42 @@
-from fastapi import APIRouter,HTTPException, Request
+from fastapi import APIRouter,HTTPException, Request,Depends
+from typing import Annotated
 from starlette import status
 from loguru import logger
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from app.services.database.database import DatabaseConnect
+from app.api.v1.endpoints.user.helper.user_helper import get_current_user
+import uuid
+import datetime
 
 router = APIRouter(
     prefix="/guild/",
     tags=["Guild"]
 )
 limiter= Limiter(key_func=get_remote_address)
+current_user=Annotated[dict, Depends(get_current_user)]
+
 try:
     @router.post('/create-guild', status_code=status.HTTP_201_CREATED)
     @limiter.limit("5/minute")
-    async def create_guild(request: Request):
-        # Simulate guild creation logic here
+    async def create_guild(request: Request,user:current_user,guild_name:str):
+        guild_id=str(uuid.uuid4())
+        doc={
+            "_id":guild_id,
+            "guild_name": guild_name,
+            "creator_id": user['user_id'],
+            "created_at": datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
+            "owner_id": user['user_id'],
+            "users": [user['user_id']],
+            "roles_in_guild": [],
+            "channels": []
+        }
+        await DatabaseConnect.guild_collection_insert_one(doc)
         logger.info("Guild created successfully")
         return {
             "status": status.HTTP_201_CREATED,
             "message": "Guild created successfully",
-            "Guild_ID": ""
+            "Guild_ID": guild_id
         }
 except:
     logger.error("Failed to create guild at '/create-guild' endpoint")
@@ -28,7 +45,7 @@ except:
 try:
     @router.delete('/{guild_id}/delete-guild', status_code=status.HTTP_200_OK)
     @limiter.limit("5/minute")
-    async def delete_guild(guild_id: str, request: Request):
+    async def delete_guild(guild_id: str, request: Request,user:current_user):
         # Simulate guild deletion logic here
         logger.info(f"Guild {guild_id} deleted successfully")
         return {
@@ -42,7 +59,7 @@ except:
 try:
     @router.put('/{guild_id}/trasfer-owner',status_code=status.HTTP_202_ACCEPTED)
     @limiter.limit("3/minute")
-    async def transfer_guild_ownership(guild_id: str, new_owner_id: str, request: Request):
+    async def transfer_guild_ownership(guild_id: str, new_owner_id: str, request: Request,user:current_user):
         # Simulate guild ownership transfer logic here
         logger.info(f"Guild_ID:{guild_id} ownership transferred to user {new_owner_id} successfully")
         return {
@@ -56,7 +73,7 @@ except:
 try:
     @router.get('/{guild_id}/guild-details', status_code=status.HTTP_200_OK)
     @limiter.limit("10/minute")
-    async def get_guild_info(guild_id: str, request: Request):
+    async def get_guild_info(guild_id: str, request: Request,user:current_user):
         # Simulate fetching guild information logic here
         logger.info(f"Fetched information for Guild_ID: {guild_id} successfully")
         return {
@@ -71,7 +88,7 @@ except:
 try:
     @router.put('/{guild_id}/update-guild-name', status_code=status.HTTP_200_OK)
     @limiter.limit("5/minute")
-    async def update_guild_name(guild_id: str, new_name: str, request: Request):
+    async def update_guild_name(guild_id: str, new_name: str, request: Request,user:current_user):
         # Simulate guild name update logic here
         logger.info(f"Guild_ID: {guild_id} name updated to {new_name} successfully")
         return {
@@ -85,7 +102,7 @@ except:
 try:
     @router.put("/{guild_id}/add-user", status_code=status.HTTP_200_OK)
     @limiter.limit("10/minute")
-    async def add_user_to_guild(guild_id: str, user_id: str, request: Request):
+    async def add_user_to_guild(guild_id: str, user_id: str, request: Request,user:current_user):
         # Simulate adding user to guild logic here
         logger.info(f"User_ID: {user_id} added to Guild_ID: {guild_id} successfully")
         return {
@@ -99,7 +116,7 @@ except:
 try:
     @router.put("/{guild_id}/remove-user", status_code=status.HTTP_200_OK)
     @limiter.limit("10/minute")
-    async def remove_user_from_guild(guild_id: str, user_id: str, request: Request):
+    async def remove_user_from_guild(guild_id: str, user_id: str, request: Request,user:current_user):
         # Simulate removing user from guild logic here
         logger.info(f"User_ID: {user_id} removed from Guild_ID: {guild_id} successfully")
         return {

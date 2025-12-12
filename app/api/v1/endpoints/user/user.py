@@ -16,7 +16,6 @@ router = APIRouter(
     tags=["User"]
 )
 limiter = Limiter(key_func=get_remote_address)
-
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
 try:
