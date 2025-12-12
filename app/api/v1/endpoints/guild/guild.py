@@ -7,6 +7,7 @@ from slowapi.util import get_remote_address
 from app.services.database.database import DatabaseConnect
 from app.api.v1.endpoints.user.helper.user_helper import get_current_user
 from app.api.dependencies.permission.permissions import Permission
+from app.api.v1.endpoints.guild.helper.guild_helper import *
 from app.core.config.config import settings
 import uuid
 import datetime
@@ -17,32 +18,6 @@ router = APIRouter(
 )
 limiter= Limiter(key_func=get_remote_address)
 current_user=Annotated[dict, Depends(get_current_user)]
-
-async def isUserinGuild(user_id, guild_id):
-    guild = await DatabaseConnect.guild_collection_find_one(guild_id)
-    if not guild:
-        logger.error(f"Guild with ID {guild_id} not found")
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Guild not found")
-    if user_id in guild['users']:
-        user_doc = await DatabaseConnect.user_collection_find_one(user_id)
-        return user_doc
-    else:
-        logger.error(f"User with ID {user_id} is not a member of guild {guild_id}")
-        return None
-    
-async def isPermitted(user_id, guild_id, permission: str):
-    user_doc = await DatabaseConnect.user_collection_find_one(user_id)
-    roles=user_doc.get("roles", [])
-    for role in roles:
-        if role['guild_id'] == guild_id:
-            role_id=role['role_id']
-            break
-    role_doc=await DatabaseConnect.role_collection_find_one(role_id)
-    permissions_list=role_doc.get("permissions", [])
-    for perm in permissions_list:
-        if perm==permission or perm=='guild_owner':
-            return True
-    return False
 
 try:
     @router.post('/create-guild', status_code=status.HTTP_201_CREATED)
@@ -101,14 +76,8 @@ try:
     async def delete_guild(guild_id: str, request: Request,user:current_user):
         user_id=user['user_id']
         user_name=user['user_name']
-        user_doc=await isUserinGuild(user_id, guild_id)
-        if not user_doc:
-            logger.error(f"User{user_name} with ID {user_id} is not a member of guild {guild_id}")
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"User{user_id} is not a member of the guild")
+        await ValidUserCheck(user_id,user_name,guild_id,"guild_owner")
         guild_doc=await DatabaseConnect.guild_collection_find_one(guild_id)
-        if guild_doc['owner_id'] != user_id:
-            logger.error(f"User with ID {user_id} is not the owner of guild {guild_id}")
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the guild owner can delete the guild")
         user_list=guild_doc.get("users", [])
         for user_id in user_list:
             user_doc=await DatabaseConnect.user_collection_find_one(user_id)
@@ -152,18 +121,12 @@ try:
     async def transfer_guild_ownership(guild_id: str, new_owner_id: str, request: Request,user:current_user):
         user_id=user['user_id']
         user_name=user['user_name']
-        user_doc=await isUserinGuild(user_id, guild_id)
-        if not user_doc:
-            logger.error(f"User{user_name} with ID {user_id} is not a member of guild {guild_id}")
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"User{user_id} is not a member of the guild")
+        await ValidUserCheck(user_id,user_name,guild_id,"guild_owner")
         user_doc=await isUserinGuild(new_owner_id, guild_id)
         if not user_doc:
             logger.error(f"New owner with ID {new_owner_id} is not a member of guild {guild_id}")
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="New owner must be a member of the guild")
         guild_doc=await DatabaseConnect.guild_collection_find_one(guild_id)
-        if guild_doc['owner_id'] != user_id:
-            logger.error(f"User with ID {user_id} is not the owner of guild {guild_id}")
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the guild owner can transfer ownership")
         update_guild_doc={
             "$set": {
                 "owner_id": new_owner_id
@@ -231,13 +194,7 @@ try:
     async def update_guild_name(guild_id: str, new_guild_name: str, request: Request,user:current_user):
         user_id=user['user_id']
         user_name=user['user_name']
-        user_doc=await isUserinGuild(user_id, guild_id)
-        if not user_doc:
-            logger.error(f"User{user_name} with ID {user_id} is not a member of guild {guild_id}")
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"User{user_id} is not a member of the guild")
-        if not await isPermitted(user_id, guild_id, "mod_guild"):
-            logger.error(f"User with ID {user_id} does not have permission to modify guild {guild_id}")
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User does not have permission to modify guild")
+        await ValidUserCheck(user_id,user_name,guild_id,"mod_guild")
         guild_doc=await DatabaseConnect.guild_collection_find_one(guild_id)
         guild_doc['guild_name']=new_guild_name
         update_guild_doc={
@@ -261,13 +218,7 @@ try:
     async def add_user_to_guild(guild_id: str, new_member_user_id: str, request: Request,user:current_user):
         user_id=user['user_id']
         user_name=user['user_name']
-        user_doc=await isUserinGuild(user_id, guild_id)
-        if not user_doc:
-            logger.error(f"User{user_name} with ID {user_id} is not a member of guild {guild_id}")
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"User{user_id} is not a member of the guild")
-        if not await isPermitted(user_id, guild_id, "add_member"):
-            logger.error(f"User with ID {user_id} does not have permission to modify guild {guild_id}")
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User does not have permission to modify guild")
+        await ValidUserCheck(user_id,user_name,guild_id,"add_guild")
         guild_doc=await DatabaseConnect.guild_collection_find_one(guild_id)
         users_list=guild_doc.get("users", [])
         for user_id in users_list:
@@ -317,13 +268,7 @@ try:
     async def remove_user_from_guild(guild_id: str, member_user_id: str, request: Request,user:current_user):
         user_id=user['user_id']
         user_name=user['user_name']
-        user_doc=await isUserinGuild(user_id, guild_id)
-        if not user_doc:
-            logger.error(f"User{user_name} with ID {user_id} is not a member of guild {guild_id}")
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"User{user_id} is not a member of the guild")
-        if not await isPermitted(user_id, guild_id, "kick_member"):
-            logger.error(f"User with ID {user_id} does not have permission to modify guild {guild_id}")
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User does not have permission to modify guild")
+        await ValidUserCheck(user_id,user_name,guild_id,"kick_member")
         guild_doc=await DatabaseConnect.guild_collection_find_one(guild_id)
         user_list=guild_doc.get("users", [])
         if member_user_id not in user_list:
