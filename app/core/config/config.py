@@ -5,6 +5,8 @@ class Settings(BaseSettings):
     APP_MODE: str
     JWT_SECRET_KEY: str
     JWT_ALGORITHM: str
+    OWNER_ROLE_ID: str
+    MEMBER_ROLE_ID: str
     
     model_config = SettingsConfigDict(
         env_file=".env",

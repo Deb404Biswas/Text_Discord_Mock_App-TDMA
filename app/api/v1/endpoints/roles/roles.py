@@ -7,7 +7,7 @@ from slowapi.util import get_remote_address
 from app.services.database.database import DatabaseConnect
 import uuid
 from app.api.v1.endpoints.user.helper.user_helper import get_current_user
-from app.api.dependencies.permissions import Permission
+from app.api.dependencies.permission.permissions import Permission
 from app.api.v1.endpoints.roles.schema.roles_schema import *
 from app.api.v1.endpoints.roles.helper.roles_helper import *
 

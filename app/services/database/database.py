@@ -79,6 +79,22 @@ class DatabaseConnect:
         except Exception as e:
             logger.error(f"Error:{e}. Occurred while fetching guild from guild collection")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail='Error while fetching guild from guild collection')
+
+    @staticmethod
+    async def guild_collection_update_one(guild_id,update_doc):
+        try:
+            await guild_collection.update_one({"_id":guild_id},update_doc)
+        except Exception as e:
+            logger.error(f"Error:{e}. Occurred while updating guild in guild collection")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail='Error while updating guild in guild collection')
+    
+    @staticmethod
+    async def guild_collection_delete_one(guild_id):    
+        try:
+            await guild_collection.delete_one({"_id":guild_id})
+        except Exception as e:
+            logger.error(f"Error:{e}. Occurred while deleting guild from guild collection")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail='Error while deleting guild from guild collection')
     
     # Role Collection Methods------------
     

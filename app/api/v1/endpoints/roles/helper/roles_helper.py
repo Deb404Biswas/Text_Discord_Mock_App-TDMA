@@ -1,7 +1,7 @@
 from app.services.database.database import DatabaseConnect
 from fastapi import HTTPException,status
 from loguru import logger
-from app.api.dependencies.permissions import Permission
+from app.api.dependencies.permission.permissions import Permission
 
 async def isValidPermissions(permissions_list):
     for perm in permissions_list:
