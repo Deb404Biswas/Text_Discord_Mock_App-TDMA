@@ -95,14 +95,22 @@ except:
 
 try:
     @router.get('/{guild_id}/{channel_id}/display-messages', status_code=status.HTTP_200_OK)
-    @limiter.limit("15/minute")
+    @limiter.limit("30/minute")
     async def display_messages(channel_id: str,guild_id: str, request: Request,user:current_user):
-        # Simulate fetching channel messages logic here
+        user_id=user['user_id']
+        user_name=user['user_name']
+        await ValidUserCheck(user_id,user_name,guild_id,"read_msg")
+        await channelInGuild(channel_id, guild_id)
+        chats=[]
+        channel_doc=await DatabaseConnect.channel_collection_find_one(channel_id)
+        chat_list=channel_doc.get("chat_list",[])
+        for chat in chat_list:
+            chats.append(chat["message"])
         logger.info(f"Messages from Channel_ID:{channel_id} in guild {guild_id} fetched successfully")
         return {
             "status": status.HTTP_200_OK,
             "message": f"Messages from Channel_ID: {channel_id} fetched successfully",
-            "Messages": []
+            "Messages": chats
         }
 except:
     logger.error("Failed to display messages at '/{guild_id}/{channel_id}/display-messages' endpoint")
@@ -112,7 +120,22 @@ try:
     @router.put('/{guild_id}/{channel_id}/send-message', status_code=status.HTTP_200_OK)
     @limiter.limit("20/minute")
     async def send_message(channel_id: str,guild_id: str, message_content: str, request: Request,user:current_user):
-        # Simulate sending message logic here
+        user_id=user['user_id']
+        user_name=user['user_name']
+        await ValidUserCheck(user_id,user_name,guild_id,"read_msg")
+        await channelInGuild(channel_id, guild_id)
+        channel_doc=await DatabaseConnect.channel_collection_find_one(channel_id)
+        chat_list=channel_doc.get("chat_list",[])
+        chat_list.append(
+            {
+             "chat_id":str(uuid.uuid4()),
+             "user_id":user_id,
+             "message":message_content,
+             "sent_at":datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+            }
+        )
+        update_channel_doc={"$set":{"chat_list":chat_list}}
+        await DatabaseConnect.channel_collection_update_one(channel_id, update_channel_doc)
         logger.info(f"Message sent to Channel_ID:{channel_id} in guild {guild_id} successfully")
         return {
             "status": status.HTTP_200_OK,
@@ -125,8 +148,19 @@ except:
 try:
     @router.put('/{guild_id}/{channel_id}/delete-message', status_code=status.HTTP_200_OK)
     @limiter.limit("15/minute")
-    async def delete_message(channel_id: str,guild_id: str, user_id: str, request: Request,user:current_user):
-        # Simulate deleting message logic here
+    async def delete_message(channel_id: str,guild_id: str,chat_id:str,request: Request,user:current_user):
+        user_id=user['user_id']
+        user_name=user['user_name']
+        await ValidUserCheck(user_id,user_name,guild_id,"edit_msg")
+        await channelInGuild(channel_id, guild_id)
+        channel_doc=await DatabaseConnect.channel_collection_find_one(channel_id)
+        chat_list=channel_doc.get("chat_list",[])
+        for chat in chat_list:
+            if chat['chat_id']==chat_id:
+                chat_list.remove(chat)
+                break
+        update_channel_doc={"$set":{"chat_list":chat_list}}
+        await DatabaseConnect.channel_collection_update_one(channel_id, update_channel_doc)
         logger.info(f"Message from User_ID:{user_id} deleted in Channel_ID:{channel_id} of guild {guild_id} successfully")
         return {
             "status": status.HTTP_200_OK,
@@ -139,8 +173,19 @@ except:
 try:
     @router.get('/{guild_id}/{channel_id}/edit-message', status_code=status.HTTP_200_OK)
     @limiter.limit("10/minute")
-    async def edit_message(channel_id: str,guild_id: str, user_id: str, new_content: str, request: Request,user:current_user):
-        # Simulate editing message logic here
+    async def edit_message(channel_id: str,guild_id: str,chat_id:str, new_content: str, request: Request,user:current_user):
+        user_id=user['user_id']
+        user_name=user['user_name']
+        await ValidUserCheck(user_id,user_name,guild_id,"edit_msg")
+        await channelInGuild(channel_id, guild_id)
+        channel_doc=await DatabaseConnect.channel_collection_find_one(channel_id)
+        chat_list=channel_doc.get("chat_list",[])
+        for chat in chat_list:
+            if chat['chat_id']==chat_id:
+                chat['message']=new_content
+                break
+        update_channel_doc={"$set":{"chat_list":chat_list}}
+        await DatabaseConnect.channel_collection_update_one(channel_id, update_channel_doc)
         logger.info(f"Message from User_ID:{user_id} edited in Channel_ID:{channel_id} of guild {guild_id} successfully")
         return {
             "status": status.HTTP_200_OK,
