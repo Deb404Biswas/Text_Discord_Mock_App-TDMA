@@ -11,7 +11,7 @@ import uuid
 import datetime
 
 router = APIRouter(
-    prefix="/channel/",
+    prefix="/channel",
     tags=["Channel"]
 )
 limiter= Limiter(key_func=get_remote_address)

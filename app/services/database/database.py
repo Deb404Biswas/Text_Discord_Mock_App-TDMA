@@ -122,6 +122,14 @@ class DatabaseConnect:
             logger.error(f"Error:{e}. Occurred while updating role in role collection")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail='Error while updating role in role collection')
     
+    @staticmethod
+    async def role_collection_delete_one(role_id):
+        try:
+            await role_collection.delete_one({"_id":role_id})
+        except Exception as e:
+            logger.error(f"Error:{e}. Occurred while deleting role in role collection")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail='Error while deleting role in role collection')
+    
     # Channel Collection Methods------------
     
     @staticmethod

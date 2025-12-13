@@ -1,7 +1,8 @@
-from fastapi import FastAPI, HTTPException, JSONResponse
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
-from loguru import logger
-from app.core.config.config import Settings
+from app.core.logging.logger import logger
+from app.core.config.config import settings
 from starlette.requests import Request
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
@@ -18,12 +19,12 @@ limiter = Limiter(key_func=get_remote_address)
 async def lifespan(app: FastAPI):
     logger.info("Starting the FastAPI server...")
     await DatabaseConnect.fetch_mongo_connection()
-    await default_roles_setup
+    await default_roles_setup()
     yield
     logger.info("Shutting down FastAPI server, closing R2 bucket client, MongoDB client...")
     await DatabaseConnect.close_mongo_connection()
     
-APP_MODE=Settings.APP_MODE
+APP_MODE=settings.APP_MODE
 docs_url=None if APP_MODE == "production" else "/docs"
 redoc_url=None if APP_MODE == "production" else "/redoc" 
 openapi_url=None if APP_MODE == "production" else "/openapi.json"
@@ -112,7 +113,7 @@ async def health_check(request:Request):
 @limiter.limit("2/second")
 async def version_check(request:Request):
     try:    
-        version=Settings.VERSION
+        version=settings.VERSION
         logger.info("Version check successfull")
         return {
             'status':200,

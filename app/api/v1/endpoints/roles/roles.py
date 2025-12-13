@@ -12,7 +12,7 @@ from app.api.v1.endpoints.roles.schema.roles_schema import *
 from app.api.v1.endpoints.roles.helper.roles_helper import *
 
 router = APIRouter(
-    prefix="/roles/",
+    prefix="/roles",
     tags=["Roles"]
 )
 limiter= Limiter(key_func=get_remote_address)

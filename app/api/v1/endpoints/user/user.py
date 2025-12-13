@@ -12,7 +12,7 @@ from app.api.v1.endpoints.user.schema.user_schema import Token, UserRequest
 from app.api.v1.endpoints.user.helper.user_helper import user_authentication, create_access_token
 
 router = APIRouter(
-    prefix="/user/",
+    prefix="/user",
     tags=["User"]
 )
 limiter = Limiter(key_func=get_remote_address)
