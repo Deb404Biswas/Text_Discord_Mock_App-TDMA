@@ -74,6 +74,7 @@ try:
         roles_list=guild_doc.get("roles_in_guild",[])
         for role_id in roles_list:
             await DatabaseConnect.role_collection_delete_one(role_id)
+            logger.info(f"Deleted role id:{role_id} from guild id:{guild_id}")
         for user_id in user_list:
             user_doc=await DatabaseConnect.user_collection_find_one(user_id)
             user_guilds=user_doc.get("guilds", [])

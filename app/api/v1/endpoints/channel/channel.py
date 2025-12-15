@@ -26,7 +26,7 @@ try:
         await ValidUserCheck(user_id,user_name,guild_id,"create_channel")
         channel_id=str(uuid.uuid4())
         channel_doc={
-            "channel_id": channel_id,
+            "_id": channel_id,
             "channel_name":channel_name,
             "guild_id":guild_id,
             "creator_id":user_id,
