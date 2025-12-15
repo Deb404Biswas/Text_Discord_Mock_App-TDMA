@@ -29,9 +29,8 @@ try:
         permissions_list=role_req.permissions_list
         await isValidPermissions(permissions_list)
         doc={
-            "_id":role_id,
+            "role_id":role_id,
             "role_name": role_name,
-            "users":[],
             "permissions": permissions_list
         }
         await DatabaseConnect.role_collection_insert_one(doc)

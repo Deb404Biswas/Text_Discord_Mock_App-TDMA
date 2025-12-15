@@ -49,7 +49,7 @@ class DatabaseConnect:
     @staticmethod
     async def user_collection_find_one(user_id):
         try:
-            user=await user_collection.find_one({"user_id":user_id})
+            user=await user_collection.find_one({"_id":user_id})
             return user
         except Exception as e:
             logger.error(f"Error:{e}. Occurred while fetching user from user collection")
@@ -57,7 +57,7 @@ class DatabaseConnect:
     @staticmethod
     async def user_collection_update_one(user_id,update_doc):
         try:
-            await user_collection.update_one({"user_id":user_id},update_doc)
+            await user_collection.update_one({"_id":user_id},update_doc)
         except Exception as e:
             logger.error(f"Error:{e}. Occurred while updating user in user collection")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail='Error while updating user in user collection')
@@ -74,7 +74,7 @@ class DatabaseConnect:
     @staticmethod
     async def guild_collection_find_one(guild_id):
         try:
-            guild=await guild_collection.find_one({"guild_id":guild_id})
+            guild=await guild_collection.find_one({"_id":guild_id})
             return guild
         except Exception as e:
             logger.error(f"Error:{e}. Occurred while fetching guild from guild collection")
@@ -83,7 +83,7 @@ class DatabaseConnect:
     @staticmethod
     async def guild_collection_update_one(guild_id,update_doc):
         try:
-            await guild_collection.update_one({"guild_id":guild_id},update_doc)
+            await guild_collection.update_one({"_id":guild_id},update_doc)
         except Exception as e:
             logger.error(f"Error:{e}. Occurred while updating guild in guild collection")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail='Error while updating guild in guild collection')
@@ -91,7 +91,7 @@ class DatabaseConnect:
     @staticmethod
     async def guild_collection_delete_one(guild_id):    
         try:
-            await guild_collection.delete_one({"guild_id":guild_id})
+            await guild_collection.delete_one({"_id":guild_id})
         except Exception as e:
             logger.error(f"Error:{e}. Occurred while deleting guild from guild collection")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail='Error while deleting guild from guild collection')
@@ -109,7 +109,7 @@ class DatabaseConnect:
     @staticmethod
     async def role_collection_find_one(role_id):
         try:
-            role_doc = await role_collection.find_one({"role_id":role_id})
+            role_doc = await role_collection.find_one({"_id":role_id})
             logger.debug(f"role doc :{role_doc}")
             return role_doc
         except Exception as e:
@@ -119,7 +119,7 @@ class DatabaseConnect:
     @staticmethod
     async def role_collection_update_one(role_id,update_doc):
         try:
-            await role_collection.update_one({"role_id":role_id},update_doc)
+            await role_collection.update_one({"_id":role_id},update_doc)
         except Exception as e:
             logger.error(f"Error:{e}. Occurred while updating role in role collection")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail='Error while updating role in role collection')
@@ -127,7 +127,7 @@ class DatabaseConnect:
     @staticmethod
     async def role_collection_delete_one(role_id):
         try:
-            await role_collection.delete_one({"role_id":role_id})
+            await role_collection.delete_one({"_id":role_id})
         except Exception as e:
             logger.error(f"Error:{e}. Occurred while deleting role in role collection")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail='Error while deleting role in role collection')
@@ -145,7 +145,7 @@ class DatabaseConnect:
     @staticmethod
     async def channel_collection_find_one(channel_id):
         try:
-            return await channel_collection.find_one({"channel_id":channel_id})
+            return await channel_collection.find_one({"_id":channel_id})
         except Exception as e:
             logger.error(f"Error:{e}. Occurred while fetching channel from channel collection")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail='Error while fetching channel from channel collection')
@@ -153,7 +153,7 @@ class DatabaseConnect:
     @staticmethod
     async def channel_collection_update_one(channel_id,update_doc):
         try:
-            await channel_collection.update_one({"channel_id":channel_id},update_doc)
+            await channel_collection.update_one({"_id":channel_id},update_doc)
         except Exception as e:
             logger.error(f"Error:{e}. Occurred while updating channel in channel collection")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail='Error while updating channel in channel collection')
@@ -161,7 +161,7 @@ class DatabaseConnect:
     @staticmethod
     async def channel_collection_delete_one(channel_id):
         try:
-            await channel_collection.delete_one({"channel_id":channel_id})
+            await channel_collection.delete_one({"_id":channel_id})
         except Exception as e:
             logger.error(f"Error:{e}. Occurred while deleting channel from channel collection")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail='Error while deleting channel from channel collection')
