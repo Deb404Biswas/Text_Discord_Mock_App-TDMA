@@ -25,7 +25,7 @@ async def isPermitted(user_id, guild_id, permission: str):
                 permissions_list=role_doc.get("permissions", [])
                 for perm in permissions_list:
                     logger.debug(f"perm:{perm}")
-                    if perm=='guild_owner':
+                    if perm==permission or perm=='guild_owner':
                         return True
     return False
 
