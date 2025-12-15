@@ -14,6 +14,6 @@ async def default_roles_setup():
             "_id":settings.MEMBER_ROLE_ID,
             "role_name":"member",
             "users":[],
-            "permissions":['read_msg','write_msg']
+            "permissions":['read_msg','write_msg',"delete_msg","edit_msg"]
         }
         await DatabaseConnect.role_collection_insert_one(member_role_doc)

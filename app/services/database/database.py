@@ -109,7 +109,9 @@ class DatabaseConnect:
     @staticmethod
     async def role_collection_find_one(role_id):
         try:
-            return await role_collection.find_one({"_id":role_id})
+            role_doc = await role_collection.find_one({"_id":role_id})
+            logger.debug(f"role doc :{role_doc}")
+            return role_doc
         except Exception as e:
             logger.error(f"Error:{e}. Occurred while fetching role from role collection")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail='Error while fetching role from role collection')

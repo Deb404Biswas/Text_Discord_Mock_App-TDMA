@@ -14,13 +14,14 @@ async def role_check_manage_roles(user_id, guild_id):
     roles=user_doc.get("roles", [])
     for role in roles:
         if role['guild_id'] == guild_id:
-            role_id=role['role_id']
-            break
-    role_doc=await DatabaseConnect.role_collection_find_one(role_id)
-    permissions_list=role_doc.get("permissions", [])
-    for perm in permissions_list:
-        if perm == 'manage_roles':
-            return True
+            role_ids=role['roles_id']
+            for role_id in role_ids:
+                role_doc=await DatabaseConnect.role_collection_find_one(role_id)
+                permissions_list=role_doc.get("permissions", [])
+                for perm in permissions_list:
+                    logger.debug(f"perm:{perm}")
+                    if perm == 'guild_owner':
+                        return True
     return False
 
 async def isUserinGuild(user_id, guild_id):
@@ -36,10 +37,12 @@ async def isUserinGuild(user_id, guild_id):
         return None
     
 async def userValidCheck(user_name,user_id,guild_id):
-    if not isUserinGuild(user_id, guild_id):
+    logger.debug("Performing user in guild check")
+    if not await isUserinGuild(user_id, guild_id):
         logger.error(f"User{user_name} with ID {user_id} is not a member of guild {guild_id}")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"User{user_id} is not a member of the guild")
-    if not role_check_manage_roles(user_id, guild_id):
+    logger.debug("Performing 'manage_roles' check")
+    if not await role_check_manage_roles(user_id, guild_id):
         logger.error(f"User with ID {user_id} does not have permission to manage roles in guild {guild_id}")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User not authorized to manage roles in the guild")
     return True
