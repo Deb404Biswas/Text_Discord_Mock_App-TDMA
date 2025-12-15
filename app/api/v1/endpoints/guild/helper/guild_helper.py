@@ -8,7 +8,8 @@ async def isUserinGuild(user_id, guild_id):
     if not guild:
         logger.error(f"Guild with ID {guild_id} not found")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Guild not found")
-    if user_id in guild['users']:
+    user_list=guild.get("users", [])
+    if user_id in user_list:
         user_doc = await DatabaseConnect.user_collection_find_one(user_id)
         return user_doc
     else:
@@ -20,14 +21,13 @@ async def isPermitted(user_id, guild_id, permission: str):
     roles=user_doc.get("roles", [])
     for role in roles:
         if role['guild_id'] == guild_id:
-            role_ids=role['roles_id']
-            for role_id in role_ids:
-                role_doc=await DatabaseConnect.role_collection_find_one(role_id)
-                permissions_list=role_doc.get("permissions", [])
-                for perm in permissions_list:
-                    logger.debug(f"perm:{perm}")
-                    if perm==permission or perm=='guild_owner':
-                        return True
+            role_id=role['role_id']
+            role_doc=await DatabaseConnect.role_collection_find_one(role_id)
+            permissions_list=role_doc.get("permissions", [])
+            for perm in permissions_list:
+                logger.debug(f"perm:{perm}")
+                if perm==permission or perm=='guild_owner':
+                    return True
     return False
 
 async def ValidUserCheck(user_id,user_name,guild_id,permission):
