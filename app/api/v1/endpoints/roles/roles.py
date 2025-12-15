@@ -26,6 +26,10 @@ try:
             return
         role_id=str(uuid.uuid4())
         role_name=role_req.role_name
+        guild_doc=await DatabaseConnect.guild_collection_find_one(guild_id)
+        roles_list=guild_doc.get("roles_in_guild", [])
+        if role_name in roles_list:
+            HTTPException(status_code=status.HTTP_409_CONFLICT,detail=f"Role with name {role_name} already exists.")
         permissions_list=role_req.permissions_list
         await isValidPermissions(permissions_list)
         doc={
@@ -34,6 +38,11 @@ try:
             "permissions": permissions_list
         }
         await DatabaseConnect.role_collection_insert_one(doc)
+        roles_list.append(role_id)
+        update_guild_doc={"$set": 
+            {"roles_in_guild": roles_list}
+        }
+        await DatabaseConnect.guild_collection_update_one(guild_id,update_guild_doc)
         logger.info(f"Role created successfully with name {role_name},id {role_id} in guild {guild_id}")
         return {
             "status": status.HTTP_201_CREATED,
@@ -56,21 +65,20 @@ try:
         if not user_doc:
             logger.error(f"User with ID {user_id} is not a member of guild {guild_id}")
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User to assign role not found in the guild")
-        roles_list=user_doc.get("roles", [])
-        roles_list.append({"guild_id": guild_id, "role_id": role_id})
-        update_doc={"$set": {"roles": roles_list}}
-        await DatabaseConnect.user_collection_update_one(user_id,update_doc)
-        role_doc=await DatabaseConnect.role_collection_find_one(role_id)
-        user_list=role_doc.get("users", [])
-        user_list.append(user_id)
-        update_role_doc={"$set": {"users": user_list}}
-        await DatabaseConnect.role_collection_update_one(role_id,update_role_doc)
         guild_doc=await DatabaseConnect.guild_collection_find_one(guild_id)
-        roles_in_guild=guild_doc.get("roles_in_guild", [])
-        if role_id not in roles_in_guild:
-            roles_in_guild.append(role_id)
-            update_guild_doc={"$set": {"roles_in_guild": roles_in_guild}}
-            await DatabaseConnect.guild_collection_update_one(guild_id,update_guild_doc)
+        guild_roles=guild_doc.get("roles_in_guild",[])
+        if role_id not in guild_roles:
+            logger.info(f"role id {role_id} not present in guild id {guild_id}")
+            HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail=f"Role id not present in guild")
+        user_roles=user_doc.get("roles",[])
+        for user_role in user_roles:
+            if user_role["guild_id"]==guild_id:
+                user_role["role_id"]=role_id
+                update_user_doc={"$set": 
+                    {"role": user_roles}
+                }
+                await DatabaseConnect.user_collection_update_one(user_id,update_user_doc)
+                break
         logger.info(f"Role_ID:{role_id} assigned to User_ID:{user_id} successfully in guild {guild_id}")
         return {
             "status": status.HTTP_202_ACCEPTED,
@@ -87,7 +95,8 @@ try:
         if not userValidCheck(user['user_name'],user['user_id'],guild_id):
             return
         guild_doc=await DatabaseConnect.guild_collection_find_one(guild_id)
-        if role_id not in guild_doc.get("roles_in_guild", []):
+        guild_roles=guild_doc.get("roles_in_guild", [])
+        if role_id not in guild_roles:
             logger.error(f"Role with ID {role_id} not found in guild {guild_id}")
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found in the guild")
         role_doc=await DatabaseConnect.role_collection_find_one(role_id)
@@ -95,6 +104,10 @@ try:
             logger.error(f"Role with ID {role_id} not found")
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
         role_name=role_req.role_name
+        for guild_role in guild_roles:
+            guild_role_doc=await DatabaseConnect.role_collection_find_one(guild_role)
+            if guild_role_doc["role_name"]==role_name:
+                HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail=f"{role_name} already exists. Choose a different name.")
         permissions_list=role_req.permissions_list
         await isValidPermissions(permissions_list)
         update_doc={

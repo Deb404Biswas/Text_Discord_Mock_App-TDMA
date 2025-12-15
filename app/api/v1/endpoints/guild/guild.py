@@ -101,23 +101,37 @@ try:
     async def transfer_guild_ownership(guild_id: str, new_owner_id: str, request: Request,user:current_user):
         current_user_id=user['user_id']
         current_user_name=user['user_name']
-        await ValidUserCheck(current_user_id,current_user_name,guild_id,"guild_owner")
+        current_user_doc=await ValidUserCheck(current_user_id,current_user_name,guild_id,"guild_owner")
+        if not current_user_doc:
+            return
         new_owner_doc=await isUserinGuild(new_owner_id, guild_id)
         if not new_owner_doc:
             logger.error(f"New owner with ID {new_owner_id} is not a member of guild {guild_id}")
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="New owner must be a member of the guild")
         new_owner_roles=new_owner_doc.get("roles", [])
-        for user_role in new_owner_roles:
-            if user_role['guild_id'] == guild_id:
-                user_role['role_id']=f'{settings.OWNER_ROLE_ID}'
+        for new_owner_role in new_owner_roles:
+            if new_owner_role['guild_id'] == guild_id:
+                new_owner_role['role_id']=f'{settings.OWNER_ROLE_ID}'
+                logger.debug(f"Updated new_owner roles: {new_owner_roles}")
+                update_user_doc={
+                    "$set": {
+                        "roles": new_owner_roles
+                    }
+                }
+                await DatabaseConnect.user_collection_update_one(new_owner_id,update_user_doc)
                 break
-        logger.debug(f"Updated user roles: {new_owner_roles}")
-        update_user_doc={
-            "$set": {
-                "roles": new_owner_roles
-            }
-        }
-        await DatabaseConnect.user_collection_update_one(new_owner_id,update_user_doc)
+        current_user_roles=current_user_doc.get("roles", [])
+        for current_user_role in current_user_roles:
+            if current_user_role["guild_id"]==guild_id:
+                current_user_role["role_id"]=f'{settings.MEMBER_ROLE_ID}'
+                logger.debug(f"Updated previous_owner roles: {new_owner_roles}")
+                update_user_doc={
+                    "$set": {
+                        "roles": current_user_roles
+                    }
+                }
+                await DatabaseConnect.user_collection_update_one(current_user_id,update_user_doc)
+                break
         update_guild_doc={
             "$set": {
                 "owner_id": new_owner_id

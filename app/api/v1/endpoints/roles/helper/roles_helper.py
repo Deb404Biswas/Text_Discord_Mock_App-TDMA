@@ -14,14 +14,13 @@ async def role_check_manage_roles(user_id, guild_id):
     roles=user_doc.get("roles", [])
     for role in roles:
         if role['guild_id'] == guild_id:
-            role_ids=role['roles_id']
-            for role_id in role_ids:
-                role_doc=await DatabaseConnect.role_collection_find_one(role_id)
-                permissions_list=role_doc.get("permissions", [])
-                for perm in permissions_list:
-                    logger.debug(f"perm:{perm}")
-                    if perm == 'guild_owner':
-                        return True
+            role_id=role['role_id']
+            role_doc=await DatabaseConnect.role_collection_find_one(role_id)
+            permissions_list=role_doc.get("permissions", [])
+            for perm in permissions_list:
+                logger.debug(f"perm:{perm}")
+                if perm=='guild_owner':
+                    return True
     return False
 
 async def isUserinGuild(user_id, guild_id):
