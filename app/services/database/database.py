@@ -15,8 +15,7 @@ class DatabaseConnect:
     async def fetch_mongo_connection():
         global client, user_collection, guild_collection, role_collection, channel_collection
         try:
-            mongo_password = settings.MONGO_PASS
-            connection_string = f"mongodb+srv://Debdwaipayan:{mongo_password}@internship.3kcwior.mongodb.net/?tls=true&tlsAllowInvalidCertificates=true&appName=Internship"
+            connection_string = settings.MONGO_CONNECTION_URL
             client =AsyncIOMotorClient(connection_string)
             Text_Discord_Mock_App_db=client['Text_Discord_Mock_App']
             user_collection=Text_Discord_Mock_App_db['Users']

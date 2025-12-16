@@ -1,6 +1,6 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
-    MONGO_PASS: str
+    MONGO_CONNECTION_URL: str
     VERSION: str = "1.0.0"
     APP_MODE: str
     JWT_SECRET_KEY: str
