@@ -1,4 +1,4 @@
-from app.services.database.database import DatabaseConnect
+from app.services.database.database import db_service
 from fastapi import HTTPException,status
 from loguru import logger
 from app.api.dependencies.permission.permissions import Permission
@@ -10,12 +10,12 @@ async def isValidPermissions(permissions_list):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid permission: {perm}")
     
 async def role_check_manage_roles(user_id, guild_id):
-    user_doc = await DatabaseConnect.user_collection_find_one(user_id)
+    user_doc = await db_service.user_find_one(user_id)
     roles=user_doc.get("roles", [])
     for role in roles:
         if role['guild_id'] == guild_id:
             role_id=role['role_id']
-            role_doc=await DatabaseConnect.role_collection_find_one(role_id)
+            role_doc=await db_service.role_find_one(role_id)
             permissions_list=role_doc.get("permissions", [])
             for perm in permissions_list:
                 logger.debug(f"perm:{perm}")
@@ -24,12 +24,12 @@ async def role_check_manage_roles(user_id, guild_id):
     return False
 
 async def isUserinGuild(user_id, guild_id):
-    guild = await DatabaseConnect.guild_collection_find_one(guild_id)
+    guild = await db_service.guild_find_one(guild_id)
     if not guild:
         logger.error(f"Guild with ID {guild_id} not found")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Guild not found")
     if user_id in guild['users']:
-        user_doc = await DatabaseConnect.user_collection_find_one(user_id)
+        user_doc = await db_service.user_find_one(user_id)
         return user_doc
     else:
         logger.error(f"User with ID {user_id} is not a member of guild {guild_id}")

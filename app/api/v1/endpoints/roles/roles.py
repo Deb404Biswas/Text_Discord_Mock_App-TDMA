@@ -4,7 +4,7 @@ from starlette import status
 from loguru import logger
 from slowapi import Limiter
 from slowapi.util import get_remote_address
-from app.services.database.database import DatabaseConnect
+from app.services.database.database import get_db,DatabaseService
 import uuid
 from app.api.v1.endpoints.user.helper.user_helper import get_current_user
 from app.api.dependencies.permission.permissions import Permission
@@ -17,16 +17,17 @@ router = APIRouter(
 )
 limiter= Limiter(key_func=get_remote_address)
 current_user=Annotated[dict, Depends(get_current_user)]
+database=Annotated[DatabaseService,Depends(get_db)]
 
 try:
     @router.post('/{guild_id}/create-role', status_code=status.HTTP_201_CREATED)
     @limiter.limit("10/minute")
-    async def create_role(request: Request, guild_id: str,user:current_user,role_req: RoleRequest):
+    async def create_role(request: Request,db:database,guild_id: str,user:current_user,role_req: RoleRequest):
         if not await userValidCheck(user['user_name'],user['user_id'],guild_id):
             return
         role_id=str(uuid.uuid4())
         role_name=role_req.role_name
-        guild_doc=await DatabaseConnect.guild_collection_find_one(guild_id)
+        guild_doc=await db.guild_find_one(guild_id)
         roles_list=guild_doc.get("roles_in_guild", [])
         if role_name in roles_list:
             HTTPException(status_code=status.HTTP_409_CONFLICT,detail=f"Role with name {role_name} already exists.")
@@ -38,12 +39,12 @@ try:
             "role_name": role_name,
             "permissions": permissions_list
         }
-        await DatabaseConnect.role_collection_insert_one(doc)
+        await db.role_insert_one(doc)
         roles_list.append(role_id)
         update_guild_doc={"$set": 
             {"roles_in_guild": roles_list}
         }
-        await DatabaseConnect.guild_collection_update_one(guild_id,update_guild_doc)
+        await db.guild_update_one(guild_id,update_guild_doc)
         logger.info(f"Role created successfully with name {role_name},id {role_id} in guild {guild_id}")
         return {
             "status": status.HTTP_201_CREATED,
@@ -57,7 +58,7 @@ except Exception as e:
 try:
     @router.put('/{guild_id}/assign-role', status_code=status.HTTP_202_ACCEPTED)
     @limiter.limit("10/minute")
-    async def assign_role(guild_id: str, assign_req:AssignReq ,user:current_user,request: Request):
+    async def assign_role(guild_id: str, assign_req:AssignReq ,user:current_user,db:database,request: Request):
         if not await userValidCheck(user['user_name'],user['user_id'],guild_id):
             return
         role_id=assign_req.role_id
@@ -66,7 +67,7 @@ try:
         if not user_doc:
             logger.error(f"User with ID {user_id} is not a member of guild {guild_id}")
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User to assign role not found in the guild")
-        guild_doc=await DatabaseConnect.guild_collection_find_one(guild_id)
+        guild_doc=await db.guild_find_one(guild_id)
         guild_roles=guild_doc.get("roles_in_guild",[])
         if role_id not in guild_roles:
             logger.info(f"role id {role_id} not present in guild id {guild_id}")
@@ -81,7 +82,7 @@ try:
                 update_user_doc={"$set": 
                     {"roles": user_roles}
                 }
-                await DatabaseConnect.user_collection_update_one(user_id,update_user_doc)
+                await db.user_update_one(user_id,update_user_doc)
                 break
         logger.info(f"Role_ID:{role_id} assigned to User_ID:{user_id} successfully in guild {guild_id}")
         return {
@@ -95,21 +96,21 @@ except Exception as e:
 try:
     @router.put('/{guild_id}/update-role', status_code=status.HTTP_202_ACCEPTED)
     @limiter.limit("5/minute")
-    async def update_role(guild_id: str, role_id: str,user:current_user, request: Request,role_req: RoleRequest):
+    async def update_role(guild_id: str, role_id: str,user:current_user,db:database, request: Request,role_req: RoleRequest):
         if not await userValidCheck(user['user_name'],user['user_id'],guild_id):
             return
-        guild_doc=await DatabaseConnect.guild_collection_find_one(guild_id)
+        guild_doc=await db.guild_find_one(guild_id)
         guild_roles=guild_doc.get("roles_in_guild", [])
         if role_id not in guild_roles:
             logger.error(f"Role with ID {role_id} not found in guild {guild_id}")
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found in the guild")
-        role_doc=await DatabaseConnect.role_collection_find_one(role_id)
+        role_doc=await db.role_find_one(role_id)
         if not role_doc:
             logger.error(f"Role with ID {role_id} not found")
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
         role_name=role_req.role_name
         for guild_role in guild_roles:
-            guild_role_doc=await DatabaseConnect.role_collection_find_one(guild_role)
+            guild_role_doc=await db.role_find_one(guild_role)
             if guild_role_doc["role_name"]==role_name:
                 HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail=f"{role_name} already exists. Choose a different name.")
         permissions_list=role_req.permissions_list
@@ -121,7 +122,7 @@ try:
                 "permissions": permissions_list
             }
         }
-        await DatabaseConnect.role_collection_update_one(role_id,update_doc)
+        await db.role_update_one(role_id,update_doc)
         logger.info(f"Permission updated for role: {role_id} successfully in guild {guild_id}")
         return {
             "status": status.HTTP_202_ACCEPTED,

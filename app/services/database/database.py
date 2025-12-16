@@ -1,166 +1,197 @@
 from motor.motor_asyncio import AsyncIOMotorClient
-from app.core.config.config import settings
 from fastapi import HTTPException
 from loguru import logger
 from starlette import status
+from app.core.config.config import settings
 
-client=None
-user_collection=None
-guild_collection=None
-role_collection=None
-channel_collection=None
-
-class DatabaseConnect:
-    @staticmethod
-    async def fetch_mongo_connection():
-        global client, user_collection, guild_collection, role_collection, channel_collection
+class DatabaseService:
+    def __init__(self):
+        self.client = None
+        self.user_collection = None
+        self.guild_collection = None
+        self.role_collection = None
+        self.channel_collection = None
+    
+    async def connect(self):
         try:
             connection_string = settings.MONGO_CONNECTION_URI
-            client =AsyncIOMotorClient(connection_string)
-            Text_Discord_Mock_App_db=client['Text_Discord_Mock_App']
-            user_collection=Text_Discord_Mock_App_db['Users']
-            guild_collection=Text_Discord_Mock_App_db['Guilds']
-            role_collection=Text_Discord_Mock_App_db['Roles']
-            channel_collection=Text_Discord_Mock_App_db['Channels']
-            await client.admin.command("ping")
+            self.client = AsyncIOMotorClient(connection_string)
+            db = self.client['Text_Discord_Mock_App']
+            
+            self.user_collection = db['Users']
+            self.guild_collection = db['Guilds']
+            self.role_collection = db['Roles']
+            self.channel_collection = db['Channels']
+            
+            await self.client.admin.command("ping")
             logger.info("MongoDB connection established.")
         except Exception as e:
             logger.error(f"MongoDB connection failed: {e}")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail='MongoDB connection failed')
-    @staticmethod
-    async def close_mongo_connection():
-        try:
-            client.close()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail='MongoDB connection failed'
+            )
+            
+    async def close(self):
+        if self.client:
+            self.client.close()
             logger.info("MongoDB connection closed")
-        except Exception as e:
-            logger.error(f"Error:{e}. Occurred while closing mongodb connection")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail='Error while closing MongoDB connection')
     
-    # User Collection Methods--------------
-    
-    @staticmethod
-    async def user_collection_insert_one(doc):
-        try: 
-            await user_collection.insert_one(doc)
-        except Exception as e:
-            logger.error(f"Error:{e}. Occurred while inserting user into user collection")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail='Error while inserting user into user collection')
-    @staticmethod
-    async def user_collection_find_one(user_id):
+    # User operations
+    async def user_insert_one(self, doc):
         try:
-            user=await user_collection.find_one({"_id":user_id})
-            return user
+            await self.user_collection.insert_one(doc)
         except Exception as e:
-            logger.error(f"Error:{e}. Occurred while fetching user from user collection")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail='Error while fetching user from user collection')
-    @staticmethod
-    async def user_collection_update_one(user_id,update_doc):
-        try:
-            await user_collection.update_one({"_id":user_id},update_doc)
-        except Exception as e:
-            logger.error(f"Error:{e}. Occurred while updating user in user collection")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail='Error while updating user in user collection')
+            logger.error(f"Error: {e}. Occurred while inserting user")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail='Error while inserting user'
+            )
     
-    # Guild Collection Methods------------
-    
-    @staticmethod
-    async def guild_collection_insert_one(doc):
-        try: 
-            await guild_collection.insert_one(doc)
-        except Exception as e:
-            logger.error(f"Error:{e}. Occurred while inserting document into guild collection")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail='Error while inserting into guild collection')
-    @staticmethod
-    async def guild_collection_find_one(guild_id):
+    async def user_find_one(self, user_id):
         try:
-            guild=await guild_collection.find_one({"_id":guild_id})
-            return guild
+            return await self.user_collection.find_one({"_id": user_id})
         except Exception as e:
-            logger.error(f"Error:{e}. Occurred while fetching guild from guild collection")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail='Error while fetching guild from guild collection')
+            logger.error(f"Error: {e}. Occurred while fetching user")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail='Error while fetching user'
+            )
+    
+    async def user_update_one(self, user_id, update_doc):
+        try:
+            await self.user_collection.update_one({"_id": user_id}, update_doc)
+        except Exception as e:
+            logger.error(f"Error: {e}. Occurred while updating user")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail='Error while updating user'
+            )
+    
+    # Guild operations
+    async def guild_insert_one(self, doc):
+        try:
+            await self.guild_collection.insert_one(doc)
+        except Exception as e:
+            logger.error(f"Error: {e}. Occurred while inserting guild")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail='Error while inserting guild'
+            )
+    
+    async def guild_find_one(self, guild_id):
+        try:
+            return await self.guild_collection.find_one({"_id": guild_id})
+        except Exception as e:
+            logger.error(f"Error: {e}. Occurred while fetching guild")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail='Error while fetching guild'
+            )
+    
+    async def guild_update_one(self, guild_id, update_doc):
+        try:
+            await self.guild_collection.update_one({"_id": guild_id}, update_doc)
+        except Exception as e:
+            logger.error(f"Error: {e}. Occurred while updating guild")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail='Error while updating guild'
+            )
+    
+    async def guild_delete_one(self, guild_id):
+        try:
+            await self.guild_collection.delete_one({"_id": guild_id})
+        except Exception as e:
+            logger.error(f"Error: {e}. Occurred while deleting guild")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail='Error while deleting guild'
+            )
+    
+    # Role operations
+    async def role_insert_one(self, doc):
+        try:
+            await self.role_collection.insert_one(doc)
+        except Exception as e:
+            logger.error(f"Error: {e}. Occurred while inserting role")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail='Error while inserting role'
+            )
+    
+    async def role_find_one(self, role_id):
+        try:
+            return await self.role_collection.find_one({"_id": role_id})
+        except Exception as e:
+            logger.error(f"Error: {e}. Occurred while fetching role")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail='Error while fetching role'
+            )
+    
+    async def role_update_one(self, role_id, update_doc):
+        try:
+            await self.role_collection.update_one({"_id": role_id}, update_doc)
+        except Exception as e:
+            logger.error(f"Error: {e}. Occurred while updating role")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail='Error while updating role'
+            )
+    
+    async def role_delete_one(self, role_id):
+        try:
+            await self.role_collection.delete_one({"_id": role_id})
+        except Exception as e:
+            logger.error(f"Error: {e}. Occurred while deleting role")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail='Error while deleting role'
+            )
+    
+    # Channel operations
+    async def channel_insert_one(self, doc):
+        try:
+            await self.channel_collection.insert_one(doc)
+        except Exception as e:
+            logger.error(f"Error: {e}. Occurred while inserting channel")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail='Error while inserting channel'
+            )
+    
+    async def channel_find_one(self, channel_id):
+        try:
+            return await self.channel_collection.find_one({"_id": channel_id})
+        except Exception as e:
+            logger.error(f"Error: {e}. Occurred while fetching channel")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail='Error while fetching channel'
+            )
+    
+    async def channel_update_one(self, channel_id, update_doc):
+        try:
+            await self.channel_collection.update_one({"_id": channel_id}, update_doc)
+        except Exception as e:
+            logger.error(f"Error: {e}. Occurred while updating channel")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail='Error while updating channel'
+            )
+    
+    async def channel_delete_one(self, channel_id):
+        try:
+            await self.channel_collection.delete_one({"_id": channel_id})
+        except Exception as e:
+            logger.error(f"Error: {e}. Occurred while deleting channel")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail='Error while deleting channel'
+            )
 
-    @staticmethod
-    async def guild_collection_update_one(guild_id,update_doc):
-        try:
-            await guild_collection.update_one({"_id":guild_id},update_doc)
-        except Exception as e:
-            logger.error(f"Error:{e}. Occurred while updating guild in guild collection")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail='Error while updating guild in guild collection')
-    
-    @staticmethod
-    async def guild_collection_delete_one(guild_id):    
-        try:
-            await guild_collection.delete_one({"_id":guild_id})
-        except Exception as e:
-            logger.error(f"Error:{e}. Occurred while deleting guild from guild collection")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail='Error while deleting guild from guild collection')
-    
-    # Role Collection Methods------------
-    
-    @staticmethod
-    async def role_collection_insert_one(doc):
-        try: 
-            await role_collection.insert_one(doc)
-        except Exception as e:
-            logger.error(f"Error:{e}. Occurred while inserting document into role collection")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail='Error while inserting into role collection')
-    
-    @staticmethod
-    async def role_collection_find_one(role_id):
-        try:
-            role_doc = await role_collection.find_one({"_id":role_id})
-            logger.debug(f"role doc :{role_doc}")
-            return role_doc
-        except Exception as e:
-            logger.error(f"Error:{e}. Occurred while fetching role from role collection")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail='Error while fetching role from role collection')
-    
-    @staticmethod
-    async def role_collection_update_one(role_id,update_doc):
-        try:
-            await role_collection.update_one({"_id":role_id},update_doc)
-        except Exception as e:
-            logger.error(f"Error:{e}. Occurred while updating role in role collection")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail='Error while updating role in role collection')
-    
-    @staticmethod
-    async def role_collection_delete_one(role_id):
-        try:
-            await role_collection.delete_one({"_id":role_id})
-        except Exception as e:
-            logger.error(f"Error:{e}. Occurred while deleting role in role collection")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail='Error while deleting role in role collection')
-    
-    # Channel Collection Methods------------
-    
-    @staticmethod
-    async def channel_collection_insert_one(doc):
-        try: 
-            await channel_collection.insert_one(doc)
-        except Exception as e:
-            logger.error(f"Error:{e}. Occurred while inserting document into channel collection")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail='Error while inserting into channel collection')
-    
-    @staticmethod
-    async def channel_collection_find_one(channel_id):
-        try:
-            return await channel_collection.find_one({"_id":channel_id})
-        except Exception as e:
-            logger.error(f"Error:{e}. Occurred while fetching channel from channel collection")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail='Error while fetching channel from channel collection')
-    
-    @staticmethod
-    async def channel_collection_update_one(channel_id,update_doc):
-        try:
-            await channel_collection.update_one({"_id":channel_id},update_doc)
-        except Exception as e:
-            logger.error(f"Error:{e}. Occurred while updating channel in channel collection")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail='Error while updating channel in channel collection')
-    
-    @staticmethod
-    async def channel_collection_delete_one(channel_id):
-        try:
-            await channel_collection.delete_one({"_id":channel_id})
-        except Exception as e:
-            logger.error(f"Error:{e}. Occurred while deleting channel from channel collection")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail='Error while deleting channel from channel collection')
+db_service = DatabaseService()
+
+async def get_db() -> DatabaseService:
+    return db_service

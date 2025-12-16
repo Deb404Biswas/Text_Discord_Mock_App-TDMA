@@ -8,7 +8,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from slowapi import Limiter
 from app.middleware.response_wrapper import ResponseWrapperMiddleware
-from app.services.database.database import DatabaseConnect
+from app.services.database.database import db_service
 from app.api.dependencies.default_roles.default_roles import default_roles_setup
 from app.api.v1.router import router
 import time
@@ -18,11 +18,11 @@ limiter = Limiter(key_func=get_remote_address)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting the FastAPI server...")
-    await DatabaseConnect.fetch_mongo_connection()
+    await db_service.connect()
     await default_roles_setup()
     yield
     logger.info("Shutting down FastAPI server, closing R2 bucket client, MongoDB client...")
-    await DatabaseConnect.close_mongo_connection()
+    await db_service.close()
     
 APP_MODE=settings.APP_MODE
 docs_url=None if APP_MODE == "production" else "/docs"
