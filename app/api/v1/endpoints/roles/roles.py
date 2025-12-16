@@ -22,7 +22,7 @@ try:
     @router.post('/{guild_id}/create-role', status_code=status.HTTP_201_CREATED)
     @limiter.limit("10/minute")
     async def create_role(request: Request, guild_id: str,user:current_user,role_req: RoleRequest):
-        if not userValidCheck(user['user_name'],user['user_id'],guild_id):
+        if not await userValidCheck(user['user_name'],user['user_id'],guild_id):
             return
         role_id=str(uuid.uuid4())
         role_name=role_req.role_name
@@ -32,8 +32,9 @@ try:
             HTTPException(status_code=status.HTTP_409_CONFLICT,detail=f"Role with name {role_name} already exists.")
         permissions_list=role_req.permissions_list
         await isValidPermissions(permissions_list)
+        permissions_list.extend(["read_msg", "write_msg", "delete_msg", "edit_msg"])
         doc={
-            "role_id":role_id,
+            "_id":role_id,
             "role_name": role_name,
             "permissions": permissions_list
         }
@@ -57,7 +58,7 @@ try:
     @router.put('/{guild_id}/assign-role', status_code=status.HTTP_202_ACCEPTED)
     @limiter.limit("10/minute")
     async def assign_role(guild_id: str, assign_req:AssignReq ,user:current_user,request: Request):
-        if not userValidCheck(user['user_name'],user['user_id'],guild_id):
+        if not await userValidCheck(user['user_name'],user['user_id'],guild_id):
             return
         role_id=assign_req.role_id
         user_id=assign_req.user_id
@@ -73,9 +74,12 @@ try:
         user_roles=user_doc.get("roles",[])
         for user_role in user_roles:
             if user_role["guild_id"]==guild_id:
+                if user_role["role_id"]==role_id:
+                    logger.info(f"role id: {role_id} already assigned to user id: {user_id}")
+                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail="Role already assigned to user")
                 user_role["role_id"]=role_id
                 update_user_doc={"$set": 
-                    {"role": user_roles}
+                    {"roles": user_roles}
                 }
                 await DatabaseConnect.user_collection_update_one(user_id,update_user_doc)
                 break
@@ -92,7 +96,7 @@ try:
     @router.put('/{guild_id}/update-role', status_code=status.HTTP_202_ACCEPTED)
     @limiter.limit("5/minute")
     async def update_role(guild_id: str, role_id: str,user:current_user, request: Request,role_req: RoleRequest):
-        if not userValidCheck(user['user_name'],user['user_id'],guild_id):
+        if not await userValidCheck(user['user_name'],user['user_id'],guild_id):
             return
         guild_doc=await DatabaseConnect.guild_collection_find_one(guild_id)
         guild_roles=guild_doc.get("roles_in_guild", [])
@@ -110,6 +114,7 @@ try:
                 HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail=f"{role_name} already exists. Choose a different name.")
         permissions_list=role_req.permissions_list
         await isValidPermissions(permissions_list)
+        permissions_list.extend(["read_msg", "write_msg", "delete_msg", "edit_msg"])
         update_doc={
             "$set": {
                 "role_name": role_name,

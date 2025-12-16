@@ -23,7 +23,7 @@ try:
     @limiter.limit("10/minute")
     async def register_user(request: Request, user_req:UserRequest):
         if await DatabaseConnect.user_collection_find_one(user_req.user_id):
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT,detail=f"Choose different user_id. {user_req.user_id} already exists")
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT,detail=f"Choose different user_id. {user_req.user_id} already exists in record.")
         doc={
             "_id": user_req.user_id,
             "user_name": user_req.user_name,

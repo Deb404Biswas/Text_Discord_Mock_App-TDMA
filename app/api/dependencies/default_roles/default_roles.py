@@ -5,7 +5,6 @@ async def default_roles_setup():
         owner_role_doc={
             "_id":settings.OWNER_ROLE_ID,
             "role_name":"guild-owner",
-            "users":[],
             "permissions":['guild_owner']
         }
         await DatabaseConnect.role_collection_insert_one(owner_role_doc)
@@ -13,7 +12,6 @@ async def default_roles_setup():
         member_role_doc={
             "_id":settings.MEMBER_ROLE_ID,
             "role_name":"member",
-            "users":[],
-            "permissions":['read_msg','write_msg',"delete_msg","edit_msg"]
+            "permissions":["read_msg","write_msg","delete_msg","edit_msg"]
         }
         await DatabaseConnect.role_collection_insert_one(member_role_doc)

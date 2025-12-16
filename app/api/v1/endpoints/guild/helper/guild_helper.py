@@ -37,5 +37,5 @@ async def ValidUserCheck(user_id,user_name,guild_id,permission):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"User{user_id} is not a member of the guild")
     if not await isPermitted(user_id, guild_id, permission):
         logger.error(f"User with ID {user_id} does not have permission to modify guild {guild_id}")
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User does not have permission to modify guild")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User does not have permission to perform the operation in guild")
     return user_doc

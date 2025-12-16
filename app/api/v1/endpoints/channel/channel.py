@@ -9,6 +9,7 @@ from app.services.database.database import DatabaseConnect
 from app.api.v1.endpoints.channel.helper.channel_helper import *
 import uuid
 import datetime
+from datetime import datetime,UTC
 
 router = APIRouter(
     prefix="/channel",
@@ -105,7 +106,7 @@ try:
         channel_doc=await DatabaseConnect.channel_collection_find_one(channel_id)
         chat_list=channel_doc.get("chat_list",[])
         for chat in chat_list:
-            chats.append(chat["message"])
+            chats.append(f"{chat['user_id']}({chat['sent_at']}) --> {chat["message"]}")
         logger.info(f"Messages from Channel_ID:{channel_id} in guild {guild_id} fetched successfully")
         return {
             "status": status.HTTP_200_OK,
@@ -157,8 +158,11 @@ try:
         chat_list=channel_doc.get("chat_list",[])
         for chat in chat_list:
             if chat['chat_id']==chat_id:
-                chat_list.remove(chat)
-                break
+                if chat['user_id']==user_id:
+                    chat_list.remove(chat)
+                    break
+                else:
+                    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,detail="User not allowed to delete chats that are not their own.")
         update_channel_doc={"$set":{"chat_list":chat_list}}
         await DatabaseConnect.channel_collection_update_one(channel_id, update_channel_doc)
         logger.info(f"Message from User_ID:{user_id} deleted in Channel_ID:{channel_id} of guild {guild_id} successfully")
@@ -182,8 +186,11 @@ try:
         chat_list=channel_doc.get("chat_list",[])
         for chat in chat_list:
             if chat['chat_id']==chat_id:
-                chat['message']=new_content
-                break
+                if chat['user_id']==user_id:
+                    chat['message']=new_content
+                    break
+                else:
+                    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,detail="User not allowed to edit chats that are not his own.")
         update_channel_doc={"$set":{"chat_list":chat_list}}
         await DatabaseConnect.channel_collection_update_one(channel_id, update_channel_doc)
         logger.info(f"Message from User_ID:{user_id} edited in Channel_ID:{channel_id} of guild {guild_id} successfully")

@@ -11,6 +11,7 @@ from app.api.v1.endpoints.guild.helper.guild_helper import *
 from app.core.config.config import settings
 import uuid
 import datetime
+from datetime import datetime,UTC
 
 
 router = APIRouter(
@@ -70,21 +71,31 @@ try:
         current_user_name=user['user_name']
         await ValidUserCheck(current_user_id,current_user_name,guild_id,"guild_owner")
         guild_doc=await DatabaseConnect.guild_collection_find_one(guild_id)
-        user_list=guild_doc.get("users", [])
+        guild_channels=guild_doc.get("channels", [])
+        for channel_id in guild_channels:
+            await DatabaseConnect.channel_collection_delete_one(channel_id)
+            logger.info(f"Deleted channel id:{channel_id} from guild id:{guild_id}")
         roles_list=guild_doc.get("roles_in_guild",[])
         for role_id in roles_list:
             await DatabaseConnect.role_collection_delete_one(role_id)
             logger.info(f"Deleted role id:{role_id} from guild id:{guild_id}")
+        user_list=guild_doc.get("users", [])
         for user_id in user_list:
             user_doc=await DatabaseConnect.user_collection_find_one(user_id)
             user_guilds=user_doc.get("guilds", [])
-            user_guilds.remove(guild_id)
-            update_user_doc={
-                "$set": {
-                    "guilds": user_guilds,
-                }
-            }
-            await DatabaseConnect.user_collection_update_one(user_id,update_user_doc)
+            user_roles=user_doc.get("roles",[])
+            for user_role in user_roles:
+                if user_role["guild_id"]==guild_id:
+                    user_guilds.remove(guild_id)
+                    user_roles.remove(user_role)
+                    update_user_doc={
+                        "$set": {
+                            "guilds": user_guilds,
+                            "roles":user_roles
+                        }
+                    }
+                    await DatabaseConnect.user_collection_update_one(user_id,update_user_doc)
+                    break
         await DatabaseConnect.guild_collection_delete_one(guild_id)
         logger.info(f"Guild {guild_id} deleted successfully")
         return {
@@ -240,6 +251,9 @@ try:
         current_user_id=user['user_id']
         current_user_name=user['user_name']
         await ValidUserCheck(current_user_id,current_user_name,guild_id,"kick_member")
+        member_user_doc=await DatabaseConnect.user_collection_find_one(member_user_id)
+        if not member_user_doc:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail="User id not registered as user")
         guild_doc=await DatabaseConnect.guild_collection_find_one(guild_id)
         user_list=guild_doc.get("users", [])
         if member_user_id not in user_list:
@@ -251,7 +265,6 @@ try:
                 "users": user_list
             }
         }
-        member_user_doc=await DatabaseConnect.user_collection_find_one(member_user_id)
         member_user_guilds=member_user_doc.get("guilds", [])
         member_user_roles=member_user_doc.get("roles", [])
         for user_role in member_user_roles:

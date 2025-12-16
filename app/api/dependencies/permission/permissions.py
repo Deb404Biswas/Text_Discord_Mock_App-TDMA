@@ -8,7 +8,5 @@ class Permission(str, Enum):
     kick_member="kick member from guild"
     add_member="add member to guild"
     mod_guild="modify guild name,channel name"
-    guild_owner="all permissions in guild"
-    manage_roles="create,assign,update roles in guild"
     create_channel="create channels in guild"
     del_channel="Delete a channel in guild"
