@@ -1,7 +1,7 @@
 from app.core.config.config import settings
 from jose import jwt
 from datetime import datetime, timezone
-from app.services.database.database import DatabaseConnect
+from app.services.database.database import db_service
 from fastapi import HTTPException, Depends
 from fastapi.security import OAuth2PasswordBearer
 from loguru import logger
@@ -16,7 +16,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/v1/user/auth/user-login")
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
 async def user_authentication(user_id, user_password):
-    user=await DatabaseConnect.user_collection_find_one(user_id)
+    user=await db_service.user_find_one(user_id)
     if not user:
         logger.warning(f"User with ID {user_id} not found in database")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")

@@ -7,7 +7,7 @@ from loguru import logger
 from datetime import timedelta
 from slowapi import Limiter
 from slowapi.util import get_remote_address
-from app.services.database.database import DatabaseConnect
+from app.services.database.database import DatabaseService,get_db
 from app.api.v1.endpoints.user.schema.user_schema import Token, UserRequest
 from app.api.v1.endpoints.user.helper.user_helper import user_authentication, create_access_token
 
@@ -17,12 +17,13 @@ router = APIRouter(
 )
 limiter = Limiter(key_func=get_remote_address)
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
+database=Annotated[DatabaseService,Depends(get_db)]
 
 try:
     @router.post('/user-register', status_code=status.HTTP_201_CREATED)
     @limiter.limit("10/minute")
-    async def register_user(request: Request, user_req:UserRequest):
-        if await DatabaseConnect.user_collection_find_one(user_req.user_id):
+    async def register_user(request: Request,db:database, user_req:UserRequest):
+        if await db.user_find_one(user_req.user_id):
             raise HTTPException(status_code=status.HTTP_409_CONFLICT,detail=f"Choose different user_id. {user_req.user_id} already exists in record.")
         doc={
             "_id": user_req.user_id,
@@ -31,7 +32,7 @@ try:
             "guilds": [],
             "roles": []
         }
-        await DatabaseConnect.user_collection_insert_one(doc)
+        await db.user_insert_one(doc)
         logger.info("User registered successfully")
         return {
             "status": status.HTTP_201_CREATED,
