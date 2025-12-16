@@ -122,7 +122,9 @@ class DatabaseService:
     
     async def role_find_one(self, role_id):
         try:
-            return await self.role_collection.find_one({"_id": role_id})
+            role_doc=await self.role_collection.find_one({"_id": role_id})
+            logger.debug(f"role_doc:{role_doc},role_id:{role_id}")
+            return role_doc
         except Exception as e:
             logger.error(f"Error: {e}. Occurred while fetching role")
             raise HTTPException(

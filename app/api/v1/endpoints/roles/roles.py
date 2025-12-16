@@ -110,7 +110,9 @@ try:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
         role_name=role_req.role_name
         for guild_role in guild_roles:
+            logger.debug(f"role id in guild: {guild_role}")
             guild_role_doc=await db.role_find_one(guild_role)
+            logger.debug(f"guild_role_doc: {guild_role_doc}")
             if guild_role_doc["role_name"]==role_name:
                 HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail=f"{role_name} already exists. Choose a different name.")
         permissions_list=role_req.permissions_list

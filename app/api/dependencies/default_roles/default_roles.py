@@ -1,17 +1,17 @@
-from app.services.database.database import DatabaseConnect
+from app.services.database.database import db_service
 from app.core.config.config import settings
 async def default_roles_setup():
-    if not await DatabaseConnect.role_collection_find_one(settings.OWNER_ROLE_ID):
+    if not await db_service.role_find_one(settings.OWNER_ROLE_ID):
         owner_role_doc={
             "_id":settings.OWNER_ROLE_ID,
             "role_name":"guild-owner",
             "permissions":['guild_owner']
         }
-        await DatabaseConnect.role_collection_insert_one(owner_role_doc)
-    if not await DatabaseConnect.role_collection_find_one(settings.MEMBER_ROLE_ID):
+        await db_service.role_insert_one(owner_role_doc)
+    if not await db_service.role_find_one(settings.MEMBER_ROLE_ID):
         member_role_doc={
             "_id":settings.MEMBER_ROLE_ID,
             "role_name":"member",
             "permissions":["read_msg","write_msg","delete_msg","edit_msg"]
         }
-        await DatabaseConnect.role_collection_insert_one(member_role_doc)
+        await db_service.role_insert_one(member_role_doc)

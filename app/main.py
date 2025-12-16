@@ -19,9 +19,10 @@ limiter = Limiter(key_func=get_remote_address)
 async def lifespan(app: FastAPI):
     logger.info("Starting the FastAPI server...")
     await db_service.connect()
+    logger.info("Connected to MongoDB client...")
     await default_roles_setup()
     yield
-    logger.info("Shutting down FastAPI server, closing R2 bucket client, MongoDB client...")
+    logger.info("Shutting down FastAPI server, MongoDB client...")
     await db_service.close()
     
 APP_MODE=settings.APP_MODE

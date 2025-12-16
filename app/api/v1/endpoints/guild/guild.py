@@ -208,7 +208,7 @@ try:
     async def add_user_to_guild(guild_id: str, new_member_user_id: str, request: Request,db:database,user:current_user):
         current_user_id=user['user_id']
         current_user_name=user['user_name']
-        await ValidUserCheck(current_user_id,current_user_name,guild_id,"add_guild")
+        await ValidUserCheck(current_user_id,current_user_name,guild_id,"add_member")
         new_member_doc=await db.user_find_one(new_member_user_id)
         if not new_member_doc:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail="User id not registered as user")
