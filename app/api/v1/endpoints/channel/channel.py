@@ -5,7 +5,7 @@ from loguru import logger
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from app.api.v1.endpoints.user.helper.user_helper import get_current_user
-from app.services.database.database import DatabaseConnect
+from app.services.database.database import DatabaseService,get_db
 from app.api.v1.endpoints.channel.helper.channel_helper import *
 import uuid
 import datetime
@@ -17,11 +17,12 @@ router = APIRouter(
 )
 limiter= Limiter(key_func=get_remote_address)
 current_user=Annotated[dict, Depends(get_current_user)]
+database=Annotated[DatabaseService,Depends(get_db)]
 
 try:
     @router.post('/{guild_id}/create-channel', status_code=status.HTTP_201_CREATED)
     @limiter.limit("10/minute")
-    async def create_channel(request: Request,guild_id: str,channel_name:str,user:current_user):
+    async def create_channel(request: Request,db:database,guild_id: str,channel_name:str,user:current_user):
         user_id=user['user_id']
         user_name=user['user_name']
         await ValidUserCheck(user_id,user_name,guild_id,"create_channel")
@@ -34,12 +35,12 @@ try:
             "created_at": datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
             "chat_list":[]
         }
-        await DatabaseConnect.channel_collection_insert_one(channel_doc)
-        guild_doc=await DatabaseConnect.guild_collection_find_one(guild_id)
+        await db.channel_insert_one(channel_doc)
+        guild_doc=await db.guild_find_one(guild_id)
         channel_list=guild_doc.get("channels", [])
         channel_list.append(channel_id)
         update_guild_doc={"$set":{"channels":channel_list}}
-        await DatabaseConnect.guild_collection_update_one(guild_id, update_guild_doc)
+        await db.guild_update_one(guild_id, update_guild_doc)
         logger.info(f"Channel created successfully by {user_name} ,id:{user_id} in {guild_id}")
         return {
             "status": status.HTTP_201_CREATED,
@@ -53,17 +54,17 @@ except:
 try:
     @router.delete('/{guild_id}/delete-channel', status_code=status.HTTP_200_OK)
     @limiter.limit("10/minute")
-    async def delete_channel(guild_id: str,channel_id: str, request: Request,user:current_user):
+    async def delete_channel(guild_id: str,channel_id: str, request: Request,db:database,user:current_user):
         user_id=user['user_id']
         user_name=user['user_name']
         await ValidUserCheck(user_id,user_name,guild_id,"del_channel")
         await channelInGuild(channel_id, guild_id)
-        await DatabaseConnect.channel_collection_delete_one(channel_id)
-        guild_doc=await DatabaseConnect.guild_collection_find_one(guild_id)
+        await db.channel_delete_one(channel_id)
+        guild_doc=await db.guild_find_one(guild_id)
         channel_list=guild_doc.get("channels", [])
         channel_list.remove(channel_id)
         update_guild_doc={"$set":{"channels":channel_list}}
-        await DatabaseConnect.guild_collection_update_one(guild_id, update_guild_doc)
+        await db.guild_update_one(guild_id, update_guild_doc)
         logger.info(f"Channel {channel_id} deleted successfully from guild {guild_id}")
         return {
             "status": status.HTTP_200_OK,
@@ -76,15 +77,15 @@ except:
 try:
     @router.put('/{guild_id}/{channel_id}/rename-channel',status_code=status.HTTP_202_ACCEPTED)
     @limiter.limit("5/minute")
-    async def rename_channel(channel_id: str,guild_id: str, new_channel_name: str, request: Request,user:current_user):
+    async def rename_channel(channel_id: str,guild_id: str, new_channel_name: str, request: Request,db:database,user:current_user):
         user_id=user['user_id']
         user_name=user['user_name']
         await ValidUserCheck(user_id,user_name,guild_id,"mod_guild")
         await channelInGuild(channel_id, guild_id)
-        channel_doc=await DatabaseConnect.channel_collection_find_one(channel_id)
+        channel_doc=await db.channel_find_one(channel_id)
         channel_doc['channel_name']=new_channel_name
         update_channel_doc={"$set":{"channel_name":new_channel_name}}
-        await DatabaseConnect.channel_collection_update_one(channel_id, update_channel_doc)
+        await db.channel_update_one(channel_id, update_channel_doc)
         logger.info(f"Channel_ID:{channel_id} renamed to {new_channel_name} successfully in guild {guild_id}")
         return {
             "status": status.HTTP_202_ACCEPTED,
@@ -97,13 +98,13 @@ except:
 try:
     @router.get('/{guild_id}/{channel_id}/display-messages', status_code=status.HTTP_200_OK)
     @limiter.limit("30/minute")
-    async def display_messages(channel_id: str,guild_id: str, request: Request,user:current_user):
+    async def display_messages(channel_id: str,guild_id: str, request: Request,db:database,user:current_user):
         user_id=user['user_id']
         user_name=user['user_name']
         await ValidUserCheck(user_id,user_name,guild_id,"read_msg")
         await channelInGuild(channel_id, guild_id)
         chats=[]
-        channel_doc=await DatabaseConnect.channel_collection_find_one(channel_id)
+        channel_doc=await db.channel_find_one(channel_id)
         chat_list=channel_doc.get("chat_list",[])
         for chat in chat_list:
             chats.append(f"{chat['user_id']}({chat['sent_at']}) --> {chat["message"]}")
@@ -120,12 +121,12 @@ except:
 try:
     @router.put('/{guild_id}/{channel_id}/send-message', status_code=status.HTTP_200_OK)
     @limiter.limit("20/minute")
-    async def send_message(channel_id: str,guild_id: str, message_content: str, request: Request,user:current_user):
+    async def send_message(channel_id: str,guild_id: str, message_content: str, request: Request,db:database,user:current_user):
         user_id=user['user_id']
         user_name=user['user_name']
         await ValidUserCheck(user_id,user_name,guild_id,"read_msg")
         await channelInGuild(channel_id, guild_id)
-        channel_doc=await DatabaseConnect.channel_collection_find_one(channel_id)
+        channel_doc=await db.channel_find_one(channel_id)
         chat_list=channel_doc.get("chat_list",[])
         chat_list.append(
             {
@@ -136,7 +137,7 @@ try:
             }
         )
         update_channel_doc={"$set":{"chat_list":chat_list}}
-        await DatabaseConnect.channel_collection_update_one(channel_id, update_channel_doc)
+        await db.channel_update_one(channel_id, update_channel_doc)
         logger.info(f"Message sent to Channel_ID:{channel_id} in guild {guild_id} successfully")
         return {
             "status": status.HTTP_200_OK,
@@ -149,12 +150,12 @@ except:
 try:
     @router.put('/{guild_id}/{channel_id}/delete-message', status_code=status.HTTP_200_OK)
     @limiter.limit("15/minute")
-    async def delete_message(channel_id: str,guild_id: str,chat_id:str,request: Request,user:current_user):
+    async def delete_message(channel_id: str,guild_id: str,chat_id:str,request: Request,db:database,user:current_user):
         user_id=user['user_id']
         user_name=user['user_name']
         await ValidUserCheck(user_id,user_name,guild_id,"edit_msg")
         await channelInGuild(channel_id, guild_id)
-        channel_doc=await DatabaseConnect.channel_collection_find_one(channel_id)
+        channel_doc=await db.channel_find_one(channel_id)
         chat_list=channel_doc.get("chat_list",[])
         for chat in chat_list:
             if chat['chat_id']==chat_id:
@@ -164,7 +165,7 @@ try:
                 else:
                     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,detail="User not allowed to delete chats that are not their own.")
         update_channel_doc={"$set":{"chat_list":chat_list}}
-        await DatabaseConnect.channel_collection_update_one(channel_id, update_channel_doc)
+        await db.channel_update_one(channel_id, update_channel_doc)
         logger.info(f"Message from User_ID:{user_id} deleted in Channel_ID:{channel_id} of guild {guild_id} successfully")
         return {
             "status": status.HTTP_200_OK,
@@ -177,12 +178,12 @@ except:
 try:
     @router.get('/{guild_id}/{channel_id}/edit-message', status_code=status.HTTP_200_OK)
     @limiter.limit("10/minute")
-    async def edit_message(channel_id: str,guild_id: str,chat_id:str, new_content: str, request: Request,user:current_user):
+    async def edit_message(channel_id: str,guild_id: str,chat_id:str, new_content: str, request: Request,db:database,user:current_user):
         user_id=user['user_id']
         user_name=user['user_name']
         await ValidUserCheck(user_id,user_name,guild_id,"edit_msg")
         await channelInGuild(channel_id, guild_id)
-        channel_doc=await DatabaseConnect.channel_collection_find_one(channel_id)
+        channel_doc=await db.channel_find_one(channel_id)
         chat_list=channel_doc.get("chat_list",[])
         for chat in chat_list:
             if chat['chat_id']==chat_id:
@@ -192,7 +193,7 @@ try:
                 else:
                     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,detail="User not allowed to edit chats that are not his own.")
         update_channel_doc={"$set":{"chat_list":chat_list}}
-        await DatabaseConnect.channel_collection_update_one(channel_id, update_channel_doc)
+        await db.channel_update_one(channel_id, update_channel_doc)
         logger.info(f"Message from User_ID:{user_id} edited in Channel_ID:{channel_id} of guild {guild_id} successfully")
         return {
             "status": status.HTTP_200_OK,

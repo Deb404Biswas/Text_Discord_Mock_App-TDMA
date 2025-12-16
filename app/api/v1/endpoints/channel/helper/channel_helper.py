@@ -1,27 +1,27 @@
 from fastapi import HTTPException, status
-from app.services.database.database import DatabaseConnect
+from app.services.database.database import db_service
 from loguru import logger
 
 async def isUserinGuild(user_id, guild_id):
-    guild = await DatabaseConnect.guild_collection_find_one(guild_id)
+    guild = await db_service.guild_find_one(guild_id)
     if not guild:
         logger.error(f"Guild with ID {guild_id} not found")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Guild not found")
     user_list=guild.get("users", [])
     if user_id in user_list:
-        user_doc = await DatabaseConnect.user_collection_find_one(user_id)
+        user_doc = await db_service.user_find_one(user_id)
         return user_doc
     else:
         logger.error(f"User with ID {user_id} is not a member of guild {guild_id}")
         return None
     
 async def isPermitted(user_id, guild_id, permission: str):
-    user_doc = await DatabaseConnect.user_collection_find_one(user_id)
+    user_doc = await db_service.user_find_one(user_id)
     roles=user_doc.get("roles", [])
     for role in roles:
         if role['guild_id'] == guild_id:
             role_id=role['role_id']
-            role_doc=await DatabaseConnect.role_collection_find_one(role_id)
+            role_doc=await db_service.role_find_one(role_id)
             permissions_list=role_doc.get("permissions", [])
             for perm in permissions_list:
                 logger.debug(f"perm:{perm}")
@@ -40,7 +40,7 @@ async def ValidUserCheck(user_id,user_name,guild_id,permission):
     return True
 
 async def channelInGuild(channel_id, guild_id):
-    guild_doc = await DatabaseConnect.guild_collection_find_one(guild_id)
+    guild_doc = await db_service.guild_find_one(guild_id)
     channel_list = guild_doc.get("channels", [])
     if channel_id not in channel_list:
         logger.error(f"Channel with ID {channel_id} not found in guild {guild_id}")
