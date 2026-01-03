@@ -33,7 +33,7 @@ try:
             HTTPException(status_code=status.HTTP_409_CONFLICT,detail=f"Role with name {role_name} already exists.")
         permissions_list=role_req.permissions_list
         await isValidPermissions(permissions_list)
-        permissions_list.extend(["read_msg", "write_msg", "delete_msg", "edit_msg"])
+        # permissions_list.extend(["read_msg", "write_msg", "delete_msg", "edit_msg"])
         doc={
             "_id":role_id,
             "role_name": role_name,
@@ -45,11 +45,11 @@ try:
             {"roles_in_guild": roles_list}
         }
         await db.guild_update_one(guild_id,update_guild_doc)
-        logger.info(f"Role created successfully with name {role_name},id {role_id} in guild {guild_id}")
+        logger.info(f"Role {role_name} created successfully with name {role_name},id {role_id} in guild {guild_id}")
         return {
             "status": status.HTTP_201_CREATED,
-            "message": "Role created successfully",
-            "Role_ID": role_id
+            "message": f"Role {role_name} created successfully",
+            "role_id": role_id
         }
 except Exception as e:
     logger.error(f"Failed to create role at '/create-role' endpoint: {e}")
@@ -87,7 +87,7 @@ try:
         logger.info(f"Role_ID:{role_id} assigned to User_ID:{user_id} successfully in guild {guild_id}")
         return {
             "status": status.HTTP_202_ACCEPTED,
-            "message": f"Role_ID: {role_id} assigned"
+            "message": f"role_id: {role_id} assigned"
         }
 except Exception as e:
     logger.error(f"Failed to assign role at '/guild_id/user_id/assign-role' endpoint: {e}")
@@ -146,7 +146,7 @@ try:
         return {
             "status": status.HTTP_200_OK,
             "message": "Permissions fetched successfully",
-            "Permissions": permissions
+            "permissions": permissions
         }
 except Exception as e:
     logger.error(f"Failed to display permissions at '/display-permissions' endpoint: {e}")

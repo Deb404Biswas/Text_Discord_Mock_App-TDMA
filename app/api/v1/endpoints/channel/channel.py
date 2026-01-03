@@ -45,7 +45,7 @@ try:
         return {
             "status": status.HTTP_201_CREATED,
             "message": "Channel created successfully",
-            "Channel_ID": channel_id
+            "channel_id": channel_id
         }
 except:
     logger.error("Failed to create channel at '/create-channel' endpoint")
@@ -68,7 +68,7 @@ try:
         logger.info(f"Channel {channel_id} deleted successfully from guild {guild_id}")
         return {
             "status": status.HTTP_200_OK,
-            "message": f"Channel_ID: {channel_id} deleted successfully"
+            "message": f"channel_id: {channel_id} deleted successfully"
         }
 except:
     logger.error("Failed to delete channel at '/{guild_id}/{channel_id}/delete-channel' endpoint")
@@ -89,7 +89,7 @@ try:
         logger.info(f"Channel_ID:{channel_id} renamed to {new_channel_name} successfully in guild {guild_id}")
         return {
             "status": status.HTTP_202_ACCEPTED,
-            "message": f"Channel_ID: {channel_id} renamed to {new_channel_name} successfully"
+            "message": f"channel_id: {channel_id} renamed to {new_channel_name} successfully"
         }
 except:
     logger.error("Failed to rename channel at '/{guild_id}/{channel_id}/rename-channel' endpoint")
@@ -107,19 +107,25 @@ try:
         channel_doc=await db.channel_find_one(channel_id)
         chat_list=channel_doc.get("chat_list",[])
         for chat in chat_list:
-            chats.append(f"{chat['user_id']}({chat['sent_at']}) --> {chat["message"]}")
+            logger.debug(chat)
+            chats.append({
+                "chat_id":chat["chat_id"],
+                "user_id":chat["user_id"],
+                "message":chat["message"],
+                "sent_at":chat["sent_at"]
+            })
         logger.info(f"Messages from Channel_ID:{channel_id} in guild {guild_id} fetched successfully")
         return {
             "status": status.HTTP_200_OK,
-            "message": f"Messages from Channel_ID: {channel_id} fetched successfully",
-            "Messages": chats
+            "message": f"Messages from channel_id: {channel_id} fetched successfully",
+            "messages": chats
         }
 except:
     logger.error("Failed to display messages at '/{guild_id}/{channel_id}/display-messages' endpoint")
     raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Can't display messages at the moment")
 
 try:
-    @router.put('/{guild_id}/{channel_id}/send-message', status_code=status.HTTP_200_OK)
+    @router.post('/{guild_id}/{channel_id}/send-message', status_code=status.HTTP_200_OK)
     @limiter.limit("20/minute")
     async def send_message(channel_id: str,guild_id: str, message_content: str, request: Request,db:database,user:current_user):
         user_id=user['user_id']
@@ -128,9 +134,10 @@ try:
         await channelInGuild(channel_id, guild_id)
         channel_doc=await db.channel_find_one(channel_id)
         chat_list=channel_doc.get("chat_list",[])
+        chat_id=str(uuid.uuid4())
         chat_list.append(
             {
-             "chat_id":str(uuid.uuid4()),
+             "chat_id":chat_id,
              "user_id":user_id,
              "message":message_content,
              "sent_at":datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
@@ -141,14 +148,15 @@ try:
         logger.info(f"Message sent to Channel_ID:{channel_id} in guild {guild_id} successfully")
         return {
             "status": status.HTTP_200_OK,
-            "message": f"Message sent to Channel_ID: {channel_id} successfully"
+            "message": f"chat sent to channel_id: {channel_id} successfully",
+            "chat_id":chat_id
         }
 except:
     logger.error("Failed to send message at '/{guild_id}/{channel_id}/send-message' endpoint")
     raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Can't send message at the moment")
 
 try:
-    @router.put('/{guild_id}/{channel_id}/delete-message', status_code=status.HTTP_200_OK)
+    @router.delete('/{guild_id}/{channel_id}/delete-message', status_code=status.HTTP_200_OK)
     @limiter.limit("15/minute")
     async def delete_message(channel_id: str,guild_id: str,chat_id:str,request: Request,db:database,user:current_user):
         user_id=user['user_id']
@@ -176,7 +184,7 @@ except:
     raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Can't delete message at the moment")
 
 try:
-    @router.get('/{guild_id}/{channel_id}/edit-message', status_code=status.HTTP_200_OK)
+    @router.put('/{guild_id}/{channel_id}/edit-message', status_code=status.HTTP_200_OK)
     @limiter.limit("10/minute")
     async def edit_message(channel_id: str,guild_id: str,chat_id:str, new_content: str, request: Request,db:database,user:current_user):
         user_id=user['user_id']

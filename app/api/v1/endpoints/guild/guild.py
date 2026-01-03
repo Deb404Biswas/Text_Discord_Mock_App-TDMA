@@ -30,6 +30,16 @@ try:
             logger.error(f"User with ID {user['user_id']} not found in database")
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"{user['user_name']} not found")
         guild_id=str(uuid.uuid4())
+        channel_id=str(uuid.uuid4())
+        channel_doc={
+            "_id": channel_id,
+            "channel_name":"GENERAL",
+            "guild_id":guild_id,
+            "creator_id":user["user_id"],
+            "created_at": datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
+            "chat_list":[]
+        }
+        await db.channel_insert_one(channel_doc)
         doc={
             "_id":guild_id,
             "guild_name": guild_name,
@@ -37,8 +47,8 @@ try:
             "created_at": datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
             "owner_id": user['user_id'],
             "users": [user['user_id']],
-            "roles_in_guild": [f'{settings.OWNER_ROLE_ID}',f'{settings.MEMBER_ROLE_ID}'],
-            "channels": []
+            "roles_in_guild": [f'{settings.OWNER_ROLE_ID}',f'{settings.MEMBER_ROLE_ID}',f'{settings.BANNED_ROLE_ID}'],
+            "channels": [channel_id]
         }
         await db.guild_insert_one(doc)
         logger.info("Guild created successfully")
@@ -58,7 +68,7 @@ try:
         return {
             "status": status.HTTP_201_CREATED,
             "message": "Guild created successfully",
-            "Guild_ID": guild_id
+            "guild_id": guild_id
         }
 except:
     logger.error("Failed to create guild at '/create-guild' endpoint")
@@ -101,7 +111,7 @@ try:
         logger.info(f"Guild {guild_id} deleted successfully")
         return {
             "status": status.HTTP_200_OK,
-            "message": f"Guild_ID: {guild_id} deleted successfully"
+            "message": f"guild_id: {guild_id} deleted successfully"
         }
 except:
     logger.error("Failed to delete guild at '/{guild_id}/delete-guild' endpoint")
@@ -153,7 +163,7 @@ try:
         logger.info(f"Guild_ID:{guild_id} ownership transferred to user {new_owner_id} successfully")
         return {
             "status": status.HTTP_202_ACCEPTED,
-            "message": f"Guild_ID: {guild_id} ownership transferred to User_ID: {new_owner_id} successfully"
+            "message": f"guild_id: {guild_id} ownership transferred to User_ID: {new_owner_id} successfully"
         }
 except:
     logger.error("Failed to transfer guild ownership at '/{guild_id}/transfer-owner' endpoint")
@@ -196,7 +206,7 @@ try:
         logger.info(f"Guild_ID: {guild_id} name updated to {new_guild_name} successfully")
         return {
             "status": status.HTTP_200_OK,
-            "message": f"Guild_ID: {guild_id} name updated to {new_guild_name} successfully"
+            "message": f"guild_id: {guild_id} name updated to {new_guild_name} successfully"
         }
 except:
     logger.error("Failed to update guild name at '/{guild_id}/update-guild-name' endpoint")
@@ -239,7 +249,7 @@ try:
         logger.info(f"User_ID: {new_member_user_id} added to Guild_ID: {guild_id} successfully")
         return {
             "status": status.HTTP_200_OK,
-            "message": f"User_ID: {new_member_user_id} added to Guild_ID: {guild_id} successfully"
+            "message": f"user_id: {new_member_user_id} added to guild_ID: {guild_id} successfully"
         }
 except:
     logger.error("Failed to add user to guild at '/{guild_id}/add-user' endpoint")
@@ -284,7 +294,7 @@ try:
         logger.info(f"User_ID: {member_user_id} removed from Guild_ID: {guild_id} successfully")
         return {
             "status": status.HTTP_200_OK,
-            "message": f"User_ID: {member_user_id} removed from Guild_ID: {guild_id} successfully"
+            "message": f"user_id: {member_user_id} removed from guild_ID: {guild_id} successfully"
         }
 except:
     logger.error("Failed to remove user from guild at '/{guild_id}/remove-user' endpoint")

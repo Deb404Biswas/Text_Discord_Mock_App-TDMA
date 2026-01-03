@@ -15,3 +15,10 @@ async def default_roles_setup():
             "permissions":["read_msg","write_msg","delete_msg","edit_msg"]
         }
         await db_service.role_insert_one(member_role_doc)
+    if not await db_service.role_find_one(settings.BANNED_ROLE_ID):
+        member_role_doc={
+            "_id":settings.BANNED_ROLE_ID,
+            "role_name":"Muted-member",
+            "permissions":["read_msg"]
+        }
+        await db_service.role_insert_one(member_role_doc)
