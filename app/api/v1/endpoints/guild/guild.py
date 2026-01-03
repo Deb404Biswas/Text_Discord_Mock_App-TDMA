@@ -134,6 +134,24 @@ except:
     raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Can't delete guild at the moment")
 
 try:
+    @router.get('/{guild_id}/audit-logs', status_code=status.HTTP_200_OK)
+    @limiter.limit("5/minute")
+    async def get_audit_logs(guild_id: str, request: Request,db:database,user:current_user):
+        user_id=user['user_id']
+        user_name=user['user_name']
+        await ValidUserCheck(user_id,user_name,guild_id,"audit_log")
+        audit_logs=await db.get_audit_logs(guild_id)
+        logger.info(f"Fetched audit logs for Guild_ID: {guild_id} successfully")
+        return {
+            "status": status.HTTP_200_OK,
+            "message": f"Fetched audit logs for Guild_ID: {guild_id} successfully",
+            "audit_logs": audit_logs
+        }
+except:
+    logger.error("Failed to fetch audit logs at '/{guild_id}/audit-logs' endpoint")
+    raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Can't fetch audit logs at the moment")
+
+try:
     @router.put('/{guild_id}/trasfer-owner',status_code=status.HTTP_202_ACCEPTED)
     @limiter.limit("3/minute")
     async def transfer_guild_ownership(guild_id: str, new_owner_id: str, request: Request,db:database,user:current_user):
