@@ -65,6 +65,14 @@ try:
         }
         await db.user_update_one(user['user_id'],update_user_doc)
         logger.info(f"User {user['user_id']} added as owner to guild {guild_id}")
+        audit_doc={
+            "guild_id":guild_id,
+            "user_id":user['user_id'],
+            "username":user['user_name'],
+            "time":datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
+            "action":"Guild Creation"
+        }
+        await db.insert_audit_log(audit_doc)
         return {
             "status": status.HTTP_201_CREATED,
             "message": "Guild created successfully",
@@ -109,6 +117,14 @@ try:
                     break
         await db.guild_delete_one(guild_id)
         logger.info(f"Guild {guild_id} deleted successfully")
+        audit_doc={
+            "guild_id":guild_id,
+            "user_id":user['user_id'],
+            "username":user["user_name"],
+            "time":datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
+            "action":"Guild Deletion"
+        }
+        await db.insert_audit_log(audit_doc)
         return {
             "status": status.HTTP_200_OK,
             "message": f"guild_id: {guild_id} deleted successfully"
@@ -161,6 +177,15 @@ try:
         }
         await db.guild_update_one(guild_id,update_guild_doc)
         logger.info(f"Guild_ID:{guild_id} ownership transferred to user {new_owner_id} successfully")
+        audit_doc={
+            "guild_id":guild_id,
+            "owner_id":user['user_id'],
+            "username":user["user_name"],
+            "new_owner_id":new_owner_id,
+            "time":datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
+            "action":"Transfer Ownership"
+        }
+        await db.insert_audit_log(audit_doc)
         return {
             "status": status.HTTP_202_ACCEPTED,
             "message": f"guild_id: {guild_id} ownership transferred to User_ID: {new_owner_id} successfully"
@@ -204,6 +229,15 @@ try:
         }
         await db.guild_update_one(guild_id,update_guild_doc)
         logger.info(f"Guild_ID: {guild_id} name updated to {new_guild_name} successfully")
+        audit_doc={
+            "guild_id":guild_id,
+            "user_id":user['user_id'],
+            "username":user["user_name"],
+            "new_guild_name":new_guild_name,
+            "time":datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
+            "action":"Guild name change."
+        }
+        await db.insert_audit_log(audit_doc)
         return {
             "status": status.HTTP_200_OK,
             "message": f"guild_id: {guild_id} name updated to {new_guild_name} successfully"
@@ -247,6 +281,15 @@ try:
         await db.user_update_one(new_member_user_id,update_user_doc)
         await db.guild_update_one(guild_id,update_guild_doc)
         logger.info(f"User_ID: {new_member_user_id} added to Guild_ID: {guild_id} successfully")
+        audit_doc={
+            "guild_id":guild_id,
+            "user_id":user['user_id'],
+            "username":user["user_name"],
+            "member_id":new_member_user_id,
+            "time":datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
+            "action":"Add member to guild"
+        }
+        await db.insert_audit_log(audit_doc)
         return {
             "status": status.HTTP_200_OK,
             "message": f"user_id: {new_member_user_id} added to guild_ID: {guild_id} successfully"
@@ -292,6 +335,15 @@ try:
         await db.user_update_one(member_user_id,update_user_doc)
         await db.guild_update_one(guild_id,update_guild_doc)
         logger.info(f"User_ID: {member_user_id} removed from Guild_ID: {guild_id} successfully")
+        audit_doc={
+            "guild_id":guild_id,
+            "user_id":user['user_id'],
+            "username":user["user_name"],
+            "member_id":member_user_id,
+            "time":datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
+            "action":"Remove member from guild"
+        }
+        await db.insert_audit_log(audit_doc)
         return {
             "status": status.HTTP_200_OK,
             "message": f"user_id: {member_user_id} removed from guild_ID: {guild_id} successfully"

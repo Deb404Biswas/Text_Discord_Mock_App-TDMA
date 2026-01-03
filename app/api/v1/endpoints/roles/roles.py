@@ -5,6 +5,7 @@ from loguru import logger
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from app.services.database.database import get_db,DatabaseService
+from datetime import datetime,UTC
 import uuid
 from app.api.v1.endpoints.user.helper.user_helper import get_current_user
 from app.api.dependencies.permission.permissions import Permission
@@ -33,7 +34,6 @@ try:
             HTTPException(status_code=status.HTTP_409_CONFLICT,detail=f"Role with name {role_name} already exists.")
         permissions_list=role_req.permissions_list
         await isValidPermissions(permissions_list)
-        # permissions_list.extend(["read_msg", "write_msg", "delete_msg", "edit_msg"])
         doc={
             "_id":role_id,
             "role_name": role_name,
@@ -46,6 +46,15 @@ try:
         }
         await db.guild_update_one(guild_id,update_guild_doc)
         logger.info(f"Role {role_name} created successfully with name {role_name},id {role_id} in guild {guild_id}")
+        audit_doc={
+            "guild_id":guild_id,
+            "user_id":user['user_id'],
+            "username":user["user_name"],
+            "role_id":role_id,
+            "time":datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
+            "action":"Role created."
+        }
+        await db.insert_audit_log(audit_doc)
         return {
             "status": status.HTTP_201_CREATED,
             "message": f"Role {role_name} created successfully",
@@ -85,6 +94,16 @@ try:
                 await db.user_update_one(user_id,update_user_doc)
                 break
         logger.info(f"Role_ID:{role_id} assigned to User_ID:{user_id} successfully in guild {guild_id}")
+        audit_doc={
+            "guild_id":guild_id,
+            "user_id":user['user_id'],
+            "username":user["user_name"],
+            "role_id":role_id,
+            "member_id":user_id,
+            "time":datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
+            "action":"Role created."
+        }
+        await db.insert_audit_log(audit_doc)
         return {
             "status": status.HTTP_202_ACCEPTED,
             "message": f"role_id: {role_id} assigned"
@@ -126,6 +145,15 @@ try:
         }
         await db.role_update_one(role_id,update_doc)
         logger.info(f"Permission updated for role: {role_id} successfully in guild {guild_id}")
+        audit_doc={
+            "guild_id":guild_id,
+            "user_id":user['user_id'],
+            "username":user["user_name"],
+            "role_id":role_id,
+            "time":datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
+            "action":"Role update."
+        }
+        await db.insert_audit_log(audit_doc)
         return {
             "status": status.HTTP_202_ACCEPTED,
             "message": f"Role updated successfully"

@@ -42,6 +42,15 @@ try:
         update_guild_doc={"$set":{"channels":channel_list}}
         await db.guild_update_one(guild_id, update_guild_doc)
         logger.info(f"Channel created successfully by {user_name} ,id:{user_id} in {guild_id}")
+        audit_doc={
+            "guild_id":guild_id,
+            "channel_id":channel_id,
+            "user_id":user['user_id'],
+            "username":user["user_name"],
+            "time":datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
+            "action":"Channel creation"
+        }
+        await db.insert_audit_log(audit_doc)
         return {
             "status": status.HTTP_201_CREATED,
             "message": "Channel created successfully",
@@ -66,6 +75,15 @@ try:
         update_guild_doc={"$set":{"channels":channel_list}}
         await db.guild_update_one(guild_id, update_guild_doc)
         logger.info(f"Channel {channel_id} deleted successfully from guild {guild_id}")
+        audit_doc={
+            "guild_id":guild_id,
+            "channel_id":channel_id,
+            "user_id":user['user_id'],
+            "username":user["user_name"],
+            "time":datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
+            "action":"Channel deletion"
+        }
+        await db.insert_audit_log(audit_doc)
         return {
             "status": status.HTTP_200_OK,
             "message": f"channel_id: {channel_id} deleted successfully"
@@ -87,6 +105,16 @@ try:
         update_channel_doc={"$set":{"channel_name":new_channel_name}}
         await db.channel_update_one(channel_id, update_channel_doc)
         logger.info(f"Channel_ID:{channel_id} renamed to {new_channel_name} successfully in guild {guild_id}")
+        audit_doc={
+            "guild_id":guild_id,
+            "channel_id":channel_id,
+            "user_id":user['user_id'],
+            "username":user["user_name"],
+            "new_channel_name":new_channel_name,
+            "time":datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
+            "action":"Channel name updated."
+        }
+        await db.insert_audit_log(audit_doc)
         return {
             "status": status.HTTP_202_ACCEPTED,
             "message": f"channel_id: {channel_id} renamed to {new_channel_name} successfully"
@@ -111,7 +139,7 @@ try:
             chats.append({
                 "chat_id":chat["chat_id"],
                 "user_id":chat["user_id"],
-                "message":chat["message"],
+                "content":chat["content"],
                 "sent_at":chat["sent_at"]
             })
         logger.info(f"Messages from Channel_ID:{channel_id} in guild {guild_id} fetched successfully")
@@ -139,13 +167,23 @@ try:
             {
              "chat_id":chat_id,
              "user_id":user_id,
-             "message":message_content,
+             "content":message_content,
              "sent_at":datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
             }
         )
         update_channel_doc={"$set":{"chat_list":chat_list}}
         await db.channel_update_one(channel_id, update_channel_doc)
         logger.info(f"Message sent to Channel_ID:{channel_id} in guild {guild_id} successfully")
+        audit_doc={
+            "guild_id":guild_id,
+            "channel_id":channel_id,
+            "chat_id":chat_id,
+            "user_id":user['user_id'],
+            "username":user["user_name"],
+            "time":datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
+            "action":"Chat Sent"
+        }
+        await db.insert_audit_log(audit_doc)
         return {
             "status": status.HTTP_200_OK,
             "message": f"chat sent to channel_id: {channel_id} successfully",
@@ -175,6 +213,16 @@ try:
         update_channel_doc={"$set":{"chat_list":chat_list}}
         await db.channel_update_one(channel_id, update_channel_doc)
         logger.info(f"Message from User_ID:{user_id} deleted in Channel_ID:{channel_id} of guild {guild_id} successfully")
+        audit_doc={
+            "guild_id":guild_id,
+            "channel_id":channel_id,
+            "chat_id":chat_id,
+            "user_id":user['user_id'],
+            "username":user["user_name"],
+            "time":datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
+            "action":"Chat deleted"
+        }
+        await db.insert_audit_log(audit_doc)
         return {
             "status": status.HTTP_200_OK,
             "message": f"Message from User_ID: {user_id} deleted successfully"
@@ -203,6 +251,16 @@ try:
         update_channel_doc={"$set":{"chat_list":chat_list}}
         await db.channel_update_one(channel_id, update_channel_doc)
         logger.info(f"Message from User_ID:{user_id} edited in Channel_ID:{channel_id} of guild {guild_id} successfully")
+        audit_doc={
+            "guild_id":guild_id,
+            "channel_id":channel_id,
+            "chat_id":chat_id,
+            "user_id":user['user_id'],
+            "username":user["user_name"],
+            "time":datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
+            "action":"Chat edit."
+        }
+        await db.insert_audit_log(audit_doc)
         return {
             "status": status.HTTP_200_OK,
             "message": f"Message from User_ID: {user_id} edited successfully"

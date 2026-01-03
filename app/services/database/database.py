@@ -11,6 +11,7 @@ class DatabaseService:
         self.guild_collection = None
         self.role_collection = None
         self.channel_collection = None
+        self.audit_collection = None
     
     async def connect(self):
         try:
@@ -22,6 +23,7 @@ class DatabaseService:
             self.guild_collection = db['Guilds']
             self.role_collection = db['Roles']
             self.channel_collection = db['Channels']
+            self.audit_collection=db['Audit_Logs']
             
             await self.client.admin.command("ping")
             logger.info("MongoDB connection established.")
@@ -37,6 +39,26 @@ class DatabaseService:
             self.client.close()
             logger.info("MongoDB connection closed")
     
+    # Audit operations        
+    async def insert_audit_log(self,doc):
+        try:
+            await self.audit_collection.insert_one(doc)
+        except Exception as e:
+            logger.error(f"Error:{e}, occurred while insert into audit logs")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail='Error while inserting audit logs.'
+            )
+            
+    async def get_audit_logs(self,guild_id):
+        try:
+            return await self.audit_collection.find_one(guild_id)
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail='Error while getting audit logs.'
+            )
+            
     # User operations
     async def user_insert_one(self, doc):
         try:
